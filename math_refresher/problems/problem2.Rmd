@@ -1,0 +1,191 @@
+---
+title: "What is a Random Variable?"
+author: "Barum Park"
+date: "8/29/2019"
+output: 
+    html_document:
+        keep_md: false
+        matjax: default
+        theme: yeti
+        highlight: textmate
+---
+
+<style type="text/css">
+
+body{ 
+
+    font-size: 16px;
+    line-height: 1.7em;
+    <!-- text-align: justify; -->
+
+}
+
+blockquote {
+    padding: 10px 20px;
+    margin: 0 0 20px;
+    font-size: 16px;
+    border: solid 1px;
+}
+
+h1 { font-size: 32px; }
+
+h2 { font-size: 24px; }
+
+h3 { font-size: 20px; }
+
+.nobullet li {
+  list-style-type: none;
+}
+
+</style>
+
+<br>
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Let us recap some definitions. A real-valued **random variable** is a function from the **sample space** to the real line. We express this as
+
+$$ X: \Omega \longrightarrow \mathbb R.$$
+
+(Small note: Not all functions from $\Omega$ to $\mathbb R$ are random variables. But we won't deal with this issue here nor will you encounter any pathological cases throughout the semester.)
+
+But what does this mean? Let us start with the most basic example, the flip of a coin. A function, as you recall, is a mapping from one set to another. The rule is that no element in the domain (here $\Omega$) of a function can be mapped to two or more element in the co-domain (here $\mathbb R$). In the coin flip example, our sample space looks like
+
+$$\Omega = \{H, T\}.$$
+
+So, a random variable, being a function from $\Omega$ to $\mathbb R$ assigns to each of the elements in $\Omega$ one and only one real number. Let us arbitrarily choose the mapping as
+
+$$X(\omega) = \begin{cases} 0, \quad & \text{if } \omega = T\\
+1, & \text{if } \omega = H.\end{cases}$$
+
+Hence, whenever our experiment results in Tails, our random variable $X$ will be set to zero, and if it results in a Heads, we set $X$ to one. As Siwei nicely explained today, the *randomness* stems from our coin flip---i.e., the experiment. The random variable, on the other hand, helps us dealing with random experiments in a succinct way. Indeed, once we have defined our random variable, we can, in some sense, "forget" about sample space, and study the experiment through the random variable and its distribution. 
+
+<br>
+
+# Probability Distribution of $X$
+
+But what is the **distribution** of $X$? In a crude way, we might say that a distribution is a function of $X$ that describes the probabilities associated with it. Let us start with denoting the probability with which the coin lands Heads by $\pi$ with the necessary restriction that $0\le \pi \le 1$ (it's a probability after all).
+
+With this notation, we might describe the probabilities associated with our random variable $X$, and thus its distribution, as follows:
+
+$$P(X = x) = \begin{cases}
+\pi&\qquad \text{if } x = 1 \\
+1- \pi & \qquad \text{if } x = 0 \\
+0& \qquad \text{otherwise},\end{cases}$$
+where $x$ is just a place holder for the values that $X$ might take on, namely $0$ or $1$. Also, as we have defined, quite arbitrarily, that $X = 1$ if $\omega = \text{Heads}$ and $X = 0$ if $\omega = \text{Tails}$, this specifies all probabilities of our experiment of flipping a single coin. We can express this distribution more succinctly as 
+$$p_X(x) = P(X = x) = \pi^x ( 1 - \pi)^{1-x}, \quad x\in \{0,1\}.$$
+The function $p_X(x)$ is called the **probability mass function (pmf)** of $X$, where the subscript in $p_X(\cdot )$ is there to emphasize it's a function related to the random variable $X$. 
+
+We can check that this function contains the same information as the equation from above. For example, the probability of $X = 1$ is 
+$$p_X(1) = \pi^1(1-\pi)^{1-1} = \pi$$
+and that of $X = 0$ is
+$$p_X(0) = \pi^0(1-\pi)^{1-0} = 1 - \pi$$
+as desired.
+
+A random variable which has probability mass function $p_X(x) = p^x(1-p)^{1-x}$ is said to follow a **Bernoulli distribution**. We might denote this as $X \sim \text{Bernoulli}(\pi)$, where $\pi$ is the parameter of the distribution.
+
+<br>
+
+# Multiple Independent Coin Flips
+
+Now, suppose we flip the coin $n$ times and assume that these flips are statistically independent from each other. Recall that if two events $A$ and $B$ are statistically independent, then $P(A \text{ and } B) = P(A)P(B)$. A coin flip resulting in Heads is an event and so is the coin flip resulting in Tails. So, if we would flip the coin twice, the probability of obtaining two Heads is
+$$\begin{aligned}
+P(X_1 = 1 \text{ and } X_2 = 1) &= P(X_1 = 1)\times P( X_2 = 1)\\
+&= \Big[\pi^{1} ( 1 - \pi)^{1-1}\Big] \times\Big[ \pi^{1} ( 1 - \pi)^{1-1}\Big] \\
+&= \pi^2
+\end{aligned}$$
+More generally, we can characterize the probabilities associated with the experiment of flipping the coin twice as
+$$\begin{aligned}
+P(X_1 = x_1 \text{ and } X_2 = x_2) &= P(X_1 = x_1)\times P( X_2 = x_2) \\
+&=\Big[\pi^{x_1} ( 1 - \pi)^{1-x_1}\Big] \times \Big[\pi^{x_2} ( 1 - \pi)^{1-x_2} \Big]\\
+&= \pi^{x_1 + x_2}(1-\pi)^{2 - (x_1 + x_2)}.
+\end{aligned}$$
+Similarly, for three independent coin tosses we have
+$$\begin{aligned}
+P(X_1 = x_1 &\text{ and } X_2 = x_2 \text{ and } X_3 = x_3) \\
+&= P(X_1 = x_1)\times P( X_2 = x_2) \times P(X_3 = x_3)\\
+&=\Big[\pi^{x_1} ( 1 - \pi)^{1-x_1}\Big] \times \Big[\pi^{x_2} ( 1 - \pi)^{1-x_2} \Big] \times \Big[\pi^{x_3} ( 1 - \pi)^{1-x_3} \Big]\\
+&= \pi^{x_1 + x_2 + x_3}(1-\pi)^{3 - (x_1 + x_2 + x_3)}.
+\end{aligned}$$
+
+It seems that we are observing a pattern here! Indeed, if we would go on in this way, we would find that for $n$ independent coin flips, the the probability associated with any sequence of Heads and Tails is given as
+$$\begin{aligned}
+P(X_1 = x_1 &\text{ and } X_2 = x_2 \text{ and } \dots \text{ and } X_n = x_n) = \pi^{\sum_{i=1}^n x_i}(1-\pi)^{n - \sum_{i=1}^n x_i}.
+\end{aligned}$$
+
+For example, to get the probability of the outcome $S =\{HTHTHHTT\}$, we would have $n = 8$, $x_1 = 1$, $x_2 = 0$, $x_3 = 1$, $x_4 = 0$, $x_5 = 1$, $x_6 = 1$, $x_7 = 0$, and $x_8 = 0$. Plugging-in these $x_i$ values in the equation above will give us the probability of observing the sequence $S$.
+
+<br>
+
+# The Binomial Distribution
+
+Next, we ask what is the probability of obtaining $k$ heads after $n$ coin flips? We already know that the probability of any particular sequence of outcomes from flipping the coin $n$ times is given as $\pi^{\sum_{i=1}^n x_i}(1-\pi)^{n - \sum_{i=1}^n x_i}$. Now, note that getting $k$ Heads corresponds to $\sum_{i=1}^n X_i = k$. So, the probability of getting $k$ Heads after flipping the coin $n$ times must be
+
+$$P\left(\sum_{i=1}^n X_i = k\right) = \pi^k (1-\pi)^{n - k}.$$
+
+Actually, this is wrong. To see why, notice that the sequences $S_1 = \{HTHTHHTT\}$ and $S_2 = \{HHHHTTTT\}$ both have $4$ Heads out of $8$ tosses but that they are different sequences. The right-hand side of the equation above gives us the probability of any *particular* sequence occurring, either $S_1$ *or* $S_2$. Yet, both of them will lead to 4 heads, so that probability of $\sum_{i=1}^n X_i = k$ must be larger than $\pi^k (1-\pi)^{n - k}$. The question is "how much larger?"
+
+To answer this question, we have to think about how many sequences will lead to $k$ Heads out of $n$ coin flips. As we do not care *where* in the sequence the Heads occur, this is the same as choosing an unordered set of size $4$ from a set of $n$ objects. Hence, there are $\frac{n!}{k!(n-k)!}$ sequences with $k$ Heads. Further, *any* such a sequence will have a probability of $\pi^{k} (1-\pi)^{n-k}$ to occur. 
+
+It follows that the probability of obtaining $k$ Heads from the experiment of flipping the coin $n$ times is
+
+$$P\left(\sum_{i=1}^n X_i = k\right) = \frac{n!}{k!(n-k)!}\pi^k (1-\pi)^{n - k}.$$
+
+Lastly, we might define a new random variable as $Y = \sum_{i=1}^n X_i$, which will take on values on the set $\{0,1,...,n\}$. A variable with pmf 
+
+$$p_Y(k) = P(Y = k) = \frac{n!}{k!(n-k)!}\pi^k (1-\pi)^{n - k}$$
+
+is said to follow a **Binomial distribution** with parameters $n$ and $\pi$. This is often denoted as $Y\sim \text{Binomial}(n, \pi)$.
+
+>**EXERCISE** Suppose we flip a (possibly biased) coin that has probability $\pi$ of landing Heads until we get the first Heads outcome. Assume that the coin flips are independent. What would the sample space of this experiment look like? (Hint: it's infinitely large) Define the random variable $X$ as the toss at which the first Heads occurs. That is, $X = k$ means that you get a Heads at the $k$th toss (which implies that $k-1$ of the previous tosses landed Tails). Can you derive the probability mass function of this random variable?
+
+
+
+<!-- --- -->
+
+<!-- ## Bonus: How are Random Variables Connected to Probabilities of Events?  -->
+
+<!-- >**NOTE** This is by no means required material, you can perfectly live without knowing these technicalities. I'm providing these notes just for the curious students who want to dig deeper. -->
+
+
+<!-- First, let's ask, what are **events**? Events are subsets of the sample space. It should be noted that not all subsets of $\Omega$ are events in the case that $\Omega$ is uncountably infinite. Also, our definition of a random variable itself was, in fact, not *complete* as only what mathematicians call "measureable" functions will be random variables. But we won't deal with these issues here. -->
+
+<!-- In the single coin flip example, the sample space is  -->
+<!-- $$\Omega = \{H, T\}$$ -->
+<!-- so the collection of all possible events is -->
+<!-- $$\mathcal F = \{\varnothing, \{H\}, \{T\}, \Omega\}.$$ -->
+<!-- Notice that this is a set of sets (which are often written in calligraphic font as above).  -->
+
+<!-- To be precise, a probability is a set function from the event space to the unit interval, i.e., -->
+
+<!-- $$P : \mathcal F \longrightarrow [0,1]$$ -->
+
+<!-- which satisfies the axioms of probability. By set function we mean that the domain consists of sets (the elements in $\mathcal F$ are sets, not numbers!) and that each set is mapped to one and only one element of the co-domain. The triple $(\Omega, \mathcal F, P)$ is often called a **probability space**.  -->
+
+<!-- We say that an event $A$ occurs if we observe $\omega \in A$ as a result of an experiment and where $A\in \mathcal F$. For example, if we flip a coin and observe it lands Heads, then not only the event $\{H\}$ but also the certain event $P(\{H, T\}) = P(\Omega)$ has occurred.  -->
+
+<!-- By the axioms of probability we have, for our coin flip example,  -->
+
+<!-- - $P(\varnothing) = 0$ and $P(\Omega) = 1$ -->
+<!-- - $P(\{H\}) = \pi$, so $P(\{T\}) = 1-\pi$.  -->
+
+<!-- This perfectly specifies the probabilities of all possible events from the experiment. Notice that the arguments of the $P$ function are sets, and that it spits out real numbers between zero and one. -->
+
+<!-- Next, we might think about how to connect random variables to probabilities, since probabilities are defined on sets in the collection $\mathcal F$. To do so, we consider the **pre-image** of the random variable $X$. Notice that $X^{-1}(x)$ is a subset of $\Omega$, and thus an event: -->
+
+<!-- $$A_x = \{\omega\in \Omega: X(\omega) = x\}$$ -->
+
+<!-- In our coin flip example, this would be  -->
+<!-- $$A_0 = \{\omega \in \Omega: X(\omega) = 0\} = \{T\}$$  -->
+<!-- and -->
+<!-- $$A_1 = \{\omega\in \Omega: X(\omega) = 1\} = \{H\}.$$ -->
+
+<!-- Also, we might use the random variable $X$ to define other events, such as -->
+<!-- $$E_1 = \{\omega\in \Omega: X(\omega) < 0\} = \varnothing$$ -->
+<!-- or -->
+<!-- $$E_2 = \{\omega\in \Omega: X(\omega) \le 1\} = \Omega.$$ -->
+
+<!-- Thus, if we let the pre-image of a set $A$ under the function $X$ as $X^{-1}(A)$, where $A\in \mathcal X$ and $\mathcal X$ the co-domain of $X$, then we see immediately that we can talk about probabilities through random variables. Namely, for all $A\in \mathcal X$,  -->
+<!-- $$P(X\in A) = P(X^{-1}(A)) = P(\{\omega \in \Omega: X(\omega) \in A\}).$$ -->

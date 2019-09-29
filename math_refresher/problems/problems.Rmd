@@ -1,0 +1,202 @@
+---
+title: "Taxidriver on a Grid"
+author: "Barum Park"
+date: "8/28/2019"
+output: 
+    html_document:
+        keep_md: false
+        matjax: default
+        theme: yeti
+        highlight: textmate
+---
+
+<style type="text/css">
+
+body{ 
+
+    font-size: 16px;
+    line-height: 1.7em;
+    <!-- text-align: justify; -->
+
+}
+
+blockquote {
+    padding: 10px 20px;
+    margin: 0 0 20px;
+    font-size: 16px;
+    border: solid 1px;
+}
+
+h1 { font-size: 32px; }
+
+h2 { font-size: 24px; }
+
+h3 { font-size: 20px; }
+
+.nobullet li {
+  list-style-type: none;
+}
+
+</style>
+
+<br>
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+Return to the taxicap distance we've talked about today. But let us think about the problem of shortest paths from the upper-left corner of a grid to the lower-right corner. Think first of a $1\times 1$ grid. We know that there are two ways to get from the upper-left corner to the lower-right corner, as shown below:
+
+```{r, fig.align = "center", echo = F}
+par(mfrow = c(1,2), oma = rep(0,4))
+x = c(0, 1); y = c(1, 0)
+plot(rbind(x,y),
+     xlab = "", 
+     ylab = "",
+     xaxt = "n",
+     yaxt = "n",
+     bty = "n",
+     type = "n",
+     asp = 1)
+for (xx in c(0,1))
+    segments(xx, 0, xx, 1)
+for (yy in c(0,1))
+    segments(0, yy, 1, yy)
+segments(0, 1, 1, 1, col = "red", lwd = 3)
+segments(1, 1, 1, 0, col = "red", lwd = 3)
+
+plot(rbind(x,y),
+     xlab = "", 
+     ylab = "",
+     xaxt = "n",
+     yaxt = "n",
+     bty = "n",
+     type = "n",
+     asp = 1)
+for (xx in c(0,1))
+    segments(xx, 0, xx, 1)
+for (yy in c(0,1))
+    segments(0, yy, 1, yy)
+segments(0, 1, 0, 0, col = "red", lwd = 3)
+segments(0, 0, 1, 0, col = "red", lwd = 3)
+```
+
+In the case of a $2\times 2$ grid, we have many more possibilities to go from the upper-left corner to the lower-right corner by following shortest paths. An example path would be
+
+```{r, fig.align = "center", echo = F}
+par(oma = rep(0,4))
+x = c(0, 2); y = c(2, 0)
+plot(rbind(x,y),
+     xlab = "", 
+     ylab = "",
+     xaxt = "n",
+     yaxt = "n",
+     bty = "n",
+     type = "n",
+     asp = 1)
+for (xx in 0:2)
+    segments(xx, 0, xx, 2)
+for (yy in 0:2)
+    segments(0, yy, 2, yy)
+segments(0, 2, 1, 2, col = "red", lwd = 3)
+segments(1, 2, 1, 1, col = "red", lwd = 3)
+segments(1, 1, 2, 1, col = "red", lwd = 3)
+segments(2, 1, 2, 0, col = "red", lwd = 3)
+```
+
+Now, consider the following grid:
+
+```{r, fig.align = "center", echo = F}
+par(oma = rep(0,4))
+x = c(0, 20); y = c(20, 0)
+plot(rbind(x,y),
+     xlab = "", 
+     ylab = "",
+     xaxt = "n",
+     yaxt = "n",
+     bty = "n",
+     type = "n",
+     asp = 1)
+for (xx in 0:20)
+    segments(xx, 0, xx, 20)
+for (yy in 0:20)
+    segments(0, yy, 20, yy)
+```
+
+How many ways are there to reach the lower-right corner from the upper-left corner? Or more generally, we might ask, 
+
+> How many ways are there to reach the lower-right corner from the upper-left corner by following shortest path on a $N \times N$ grid?
+
+To give you the short answer: there are $137,846,528,820$ ways. But this is not the important point. These kinds of questions provide one of the situations where our intuition (or simple counting) fails us and, further, where mathematics becomes useful or even necessary.
+
+So, let us think about how to answer this question. First, let us go back to the following example:
+```{r, fig.align = "center", echo = F}
+par(oma = rep(0,4))
+x = c(0, 2); y = c(2, 0)
+plot(rbind(x,y),
+     xlab = "", 
+     ylab = "",
+     xaxt = "n",
+     yaxt = "n",
+     bty = "n",
+     type = "n",
+     asp = 1)
+for (xx in 0:2)
+    segments(xx, 0, xx, 2)
+for (yy in 0:2)
+    segments(0, yy, 2, yy)
+points(rbind(x,y), col = "red", pch = 19, cex = 2)
+```
+
+We solve this problem in several steps. First, we notice that *every shortest path* from the upper-left corner to the lower-right corner includes taking $2$ steps to the right and $2$ steps downwards. Hence, what matters is only in which *order* we move right and downwards.
+
+Let $R$ stand for moving right and $D$ for moving down. An example path would then look like $\{R,R,D,D\}$ or $\{R,D,R,D\}$. Notice the following: if we determine the places of $R$'s in this sequence, the placements of the $D$'s are perfectly determined---e.g., if you chose to move right at the first and third step, it must be the case that the second and last steps are downwards. So, the problem reduces choosing $2$ places out of a sequence of $4$.
+
+But how many ways there are to choose 2 out of 4 possible places? Here is the full list of possible choices: 
+
+$$\{1,2\}, \{1,3\}, \{1, 4\}, \{2,3\}, \{2,4\}, \{3,4\}$$
+
+where $\{x,y\}$ means that we take a right at the $x$th and $y$th step. But this way of proceeding is not very fruitful for dealing with large grids, say $N \times N$ with $N > 5$. So, let us take a more general approach.
+
+To reach the lower-right corner on a $N\times N$ grid, where $N$ is an integer, we have to take total of $2N$ steps, out of which $N$ has to be in the rightward direction and $N$ downward. So, we have a set $M = \{m_1, m_2,...,m_{(2N)}\}$ of possible moves out of which $N$ will be chosen to be rightward moves. 
+
+The structure of the problem is therefore exactly the same as choosing $N$ balls from an urn of size $|M| = 2N$, where the balls are **indistinguishable**. For example, taking a right at the first step and taking a right at the 10th step are the same rightward movements. 
+
+But let us think first about rightward-moves that **are distinguishable** (this proves to be much easier). We might label the $N$ rightward moves at our disposal as $R_1, R_2, ..., R_N$. Here the subscript denotes the order in which we *place* the rightward-moves within the sequence of a total of $2N$ moves, not the order in which the $R_i$'s *appear* in the sequence. That is, we will first determine the place of $R_1$ and thereafter $R_2$, but we might place $R_2$ before $R_1$ in the sequence. For example, of sequence of $\{D, D, R_2, D, R_1, D, ...\}$ would tell us that we have first chosen to put $R_1$ into the $5$th place and thereafter $R_2$ into the $3$rd place of the sequence. 
+
+Now, consider our first placement of a rightward move. We can place $R_1$ in any of the $(2N)$ places of our sequence, so there are $2N$ possibilities. After we have placed $R_1$ somewhere, there remain $2N - 1$ possible places where we can place $R_2$.
+Hence, there are $2N \times (2N - 1)$ possible ways to place the first two rightward moves, i.e., *for each* of the $2N$ choices of the first right-move, there are $(2N - 1)$ remaining ways to choose the second right-move. If we continue in this fashion up to the $N$'s rightward move, we see that there are
+
+$$2N\times (2N - 1) \times (2N - 2)\times \cdots \times [2N - (N - 1)]$$
+
+ways to place the $N$ rightward moves within the sequence of $2N$ moves. This is often expressed in *factorial* notation. If $x$ is an integer, the factorial $x$ is defined as
+
+> $$x! = x\times (x-1)\times (x-2) \cdots 2\times 1.$$
+
+So, the number of ways to choose to place $R_1$ to $R_N$ into the sequence of total $2N$ moves can be expressed as
+
+$$ \begin{aligned}
+2N\times (2N &- 1) \times (2N - 2)\times \cdots \times [2N - (N - 1)]  \\
+&=\frac{2N\times (2N - 1) \times (2N - 2)\times \cdots \times 3\times 2\times 1}{(2N - N)\times [2N - (N + 1)]\times \cdots \times 3\times 2\times 1}\\
+&=\frac{(2N)!}{(2N - N)!} \\
+&=\frac{(2N)!}{N!}.
+\end{aligned}$$
+
+(Try to pause here and make sure that this equation makes sense to you. Although it might look ugly, this is really nothing but arithmetics and canceling out the terms that appear both in the numerator and the denominator of the fraction.)
+
+Now this number will over-count the number of ways to reach the lower-right corner from the upper-left corner of the grid. The reason might be explained as follows. Consider one specific path out of the $(2N)!/N!$ possible paths we have enumerated above. Say it looks like the following: $\{R_1, D, R_2, D, D, R_3\}$. Notice that this sequence would specify exactly the same path as $\{R_2, D, R_1, D, D, R_3\}$ or $\{R_3, D, R_1, D, D, R_2\}$. Namely, all of them would correspond to a path that moves right, down, right, down, down, right---i.e., $\{R, D, R, D, D, R\}$. Further, for the same reasoning as there are $(2N)\times (2N - 1)$ possible ways to choose the first two placements of the $R_i$'s, there are exactly $N!$ ways to rearrange the $R_i$'s themselves (There are $N$ possible places where we can put $R_1$ among the $N$ positions of the $R_i$'s; there are $(N-1)$ possible places to put $R_2$ after having placed $R_1$, and so on.)
+
+Thus, to correct for this over-counting, we have to divide the previous expression by $N!$, which gives us
+
+$$\binom{2N}{N} = \frac{(2N)!}{N!N!} = \frac{(2N)!}{2N!}.$$
+
+Hence, this is the number of ways to reach the lower-right corner from the upper-left corner on a $N\times N$ grid by following shortest paths.
+
+> **EXERCISE** Can you figure out how many ways there are to move from the upper-left corner to the lower-right corner (by following shortest paths) of a grid that is not square but of dimensions $N\times K$ with $N\ne K$? 
+
+
+---
+
+**Note**: One may ask, why do we have to *divide* rather than, say, subtract $N!$ from  $(2N)!/N!$ for the correction. The reason is that *for each* sequence there are $N!$ ways to rearrange the $R_i$'s when we distinguish between the order in which they were placed. For example, there are $2! = 2$ ways to rearrange the $R_i$'s in the sequence $\{R_1, D, R_2, D\}$ but there are also $2!$ ways to rearrange the $R_i$'s in the sequence $\{D, R_2, R_1, D\}$ both of which are valid path from the upper-left corner of a $2\times 2$ grid to the lower-right corner. So, *for each* of the unordered sequences, there are $N!$ corresponding rearrangements. 
+

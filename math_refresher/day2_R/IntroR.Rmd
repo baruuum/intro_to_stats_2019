@@ -1,0 +1,687 @@
+---
+title: "Introduction to Programming in R"
+author: "Barum Park"
+date: 
+output: 
+    html_document:
+        keep_md: false
+        theme: yeti
+        highlight: textmate
+        toc: true
+        number_sections: false
+        toc_float: false
+---
+
+<style type="text/css">
+
+body{ 
+
+    font-size: 16px;
+    line-height: 1.7em;
+    <!-- text-align: justify; -->
+
+}
+
+blockquote {
+    padding: 10px 20px;
+    margin: 0 0 20px;
+    font-size: 16px;
+    border: solid 1px;
+}
+
+h1 { font-size: 32px; }
+
+h2 { font-size: 24px; }
+
+h3 { font-size: 20px; }
+
+.nobullet li {
+  list-style-type: none;
+}
+
+</style>
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+<br>
+
+# What is R?
+
+<br>
+
+R is a free (yay!) software for statistical computing. You can think of it as a big calculator with a lot of pre-written functionalities. There are a lot of reasons to recommend R but there are also a lot of reasons not to recommend it. Fortunately or not, you'll use <tt>R</tt> over this semesters, so it'll be helpful to become familiar with it a little bit. We will just cover a tip of an ice berg of what you can do with R. But I hope that this will get you started. 
+
+Along the way (and throughout this course), I'll write down a set of **Style Suggestions**. These are not strict rules which *must* be followed; even without following them, your R code will run just fine. They are just that: style suggestions. Also, you can make your own rules. The important point is that your code should be easy to read and that you should be consistent. 
+
+--- 
+
+**Disclaimer** I have to admit that I have not been very consistent in my coding style in the past. No one told me about the benefits of having a good coding style; if your code runs just fine and you get the right results, the rest didn't matter. But, please believe me, having a consistent coding style will not only benefit others, who want to read your code, but yourself. Before these rules become a habit, it is often quite difficult to hold on to them (especially when you are in a hurry). But, I believe that you'll not regret having created such a habit.
+
+---
+
+Before going into programming in R, I want to stress that it will be very, very useful for you to become familiar with the keybord shortcuts that Rstudio provides (they were not created just for fun!). While your cursor is in Rstudio, try to type `Alt + Shift + K` (for windows users) or `Option + Shift + K` (for mac users). Remembering the full list of shortcuts is probably impossible, but there are some functionalities that you'll use over and over again. In many circumstances, remembering the shortcut will save you a lot of time and stress. So, the first **Style Suggestion**, even though it has nothing to do with coding style, is the following:
+
+> **Style Suggestions** Try to become familiar with the keyboard shortcuts provided in Rstudio and USE THEM.
+
+Even though at first, it might be annoying, I can guarantee you that this will make life easier in the long run. This also applies not only to R but *any* program you use for data analysis and programming, even Excel.
+
+<br><br>
+
+# Arithmetic Operations
+
+<br>
+
+You can use (but probably won't very often) use R indeed as a calculator. For example, you can add, multiply, or divide numbers:
+```{r echo = T, results = "hide"}
+# add two numbers
+2 + 1
+
+# multiply two numbers
+2 * 2
+
+# divide one number by another
+2 / 2
+
+# raise 5 to the power of 3
+5^3
+```
+
+The lines that start with an `#` are **comments**. Everything that follows an `#` will be ignored by R (and not executed). Comments are super, super useful to make your code interpretable for yourself and others.
+
+> **Style Suggestions** (*Comments, Arithmetic Operators*)
+>
+> - Add comments to your code whenever you can.
+> - If you use arithmetic operations, `+`, `-`, `/`, put a space both *before* and *after* these operators. The only exception for this rule is `^`.
+
+Combinations of these expressions are possible as well. But, you have to be careful to check the **precedence** of the operators, i.e., which operation will be carried out first by R. The *wrong* way to evaluate $\frac{2+1}{3}$ would be to use
+```r
+# this will evaluate as 2 + (1 / 3)
+2 + 1 / 3
+```
+The right way is:
+```r
+(2 + 1) / 3
+```
+If you are not sure which expression will be evaluated first, you can always use parentheses to make it clear. All expressions within parentheses will be evaluated first; if parenthese are nested, the deepest level will be first evaluated. 
+
+```{r echo = T, results = "hide"}
+(2 * (25 + 5))^5 - 20
+```
+
+The use of parentheses here seems to be trivial, but when you write a complicated code, using parentheses wisely will make your code easier to read. Also, note what would have happened if we had not followed the coding rules from above. Your code would something look like
+
+```r
+(2*(25+5))^5-20
+```
+
+and things can become much worse...
+
+There are also a lot of built-in special functions in R. For example, you can evaluate $\log(10.1)$ by typing `log(10.1)` into your console (the log is here the natural logarithm); for the exponential function $e^{3.1}$, you can use `exp(3.1)`; for the square-root $\sqrt{2}$, you can use either `sqrt(2)` or use the fact that $\sqrt{2} = 2^{1/2}$ and type `2^(1/2)`:
+
+```{r echo = T, results = "hide"}
+# logarithm is the inverse-function of the exponential function
+exp(log(4.123))
+
+# square-root of 2/3
+sqrt(2 / 3)
+
+# alternative way to calculate square-root
+(2 / 3)^0.5
+```
+
+For a list the special mathematical functions that R has to offer, you can type
+
+```r
+?Special
+``` 
+
+into your console and browse the list (which is actually quite short...). There is also a much longer list of special functions that deal with probability distributions that we will explore later. 
+
+In general, for all functions that come with R or any package that we will use throughout the course, by adding `?` in front of the function name, you'll see its documentation. 
+
+> **EXERCISE**
+> Use R to calculate 
+> 
+> $$\frac{1}{\sqrt{2\pi}} e^{-\frac{(0.5)^2}{2}}$$
+> 
+> Use `3.14` as an approximate value of $\pi$.
+
+<br><br>
+
+# Objects in R
+
+<br>
+
+## Assignment 
+
+If you want to go beyond using R as a calculator, you have to become familiar with creating and assigning **objects**. You can create objects and assign data/values to them with either `=` or `<-`. For example,
+
+```{r}
+# assign to the object x the number 7 using <-
+x <- 7
+
+# assign to y the number 10.2 using =
+y = 10.2
+
+# calculate their sum
+x + y
+```
+
+Whether you choose `<-` or `=` to assign values to objects depends on your taste. The R community seems to prefer `<-` but many other programming languages use `=` for assignment (e.g., `Python` or `C/C++`). Throughout the course, I'll use `=` for assignments, but note that this is rather unconventional. Feel free to use `<-`.
+
+> **Style Suggestions** (*Assignment*)
+>
+> - Use `<-` or `=` for assignment, but be consistent
+> - Regardless of `<-` or `=`, add a whitespace both before and after the operator
+
+<br>
+
+## Naming Rules
+
+There are some rules about object names in R with which we won't deal here in detail. For example, an object cannot start with a number, i.e., something like `1x <- 10` wouldn't work. Similarly, `_x <- 10` doesn't work either. But even within the range of allowed object names, it is good to have some convention of naming objects.
+
+Say, you work with R objects that are related to income data from three cities: New York City, Seoul, and Hamburg. It is always a good idea to name objects according to the information they contain. But `incberlin` or `berlininc` kind of looks ugly and confusing. There are three main conventions to that are used in the R community for long names:
+
+
+1. Using dots: `inc.nyc`, `inc.seoul`, `inc.hamburg` 
+2. Using underbars: `inc_nyc`, `inc_seoul`, `inc_hamburg`
+3. Using CamelCases: `IncNyc`, `IncSeoul`, `IncHamburg`
+
+The options 1. and 2. are quite widely used in the R-community; camel-cases less so. Throughout this course, we'll use underbars for long object names, mainly for consistency with other languages (in C/C++ and Python, for example, `inc.nyc` would refer to the `nyc` element of a `inc` structure/class.) 
+
+> **Style Suggestions** (*Object Names*)
+>
+> - For long object names, use underbars (`_`) to separate between words
+
+<br><br>
+
+# Data Structures and Data Types
+
+<br>
+
+Objects in R can store more than just numbers. There are 6 basic **data types** and many many **data structures** in R. The 6 data types are
+
+1. character (e.g, `"why would you ever study ..."`)
+2. numeric (e.g., `1.2`, `3.14`)
+3. integer (e.g., `1L`, `2L`)
+4. logical (`TRUE`, `FALSE`)
+5. complex (e.g., `3 + 4i`, we will not deal with it here)
+
+In many cases, you won't have to worry too much about them (or they will be obvious); but in other cases you might get unexpected results if you don't take the data type into account. I will give you an example later on.
+
+The most often used *data structures* in R are
+
+- `vector`
+- `matrix`
+- `array`
+- `list`
+- `data.frame`
+
+Today, we will work with `vectors` and `matrices` (math camp!). `data.frame`s and `list`s will be covered when the semester starts.
+
+<br>
+
+## Vectors
+
+Let us start with the `vector` structure. A **vector** in R is just a collection of elements of the **same data type**. In other words, a vector has a `mode`. For example, we can create an empty vector by typing:
+
+```{r}
+# create a numeric vector of length 5
+v1 = vector(mode = "numeric", length = 5)
+v1
+```
+or
+```{r}
+# create a character vector of length 3
+v2 = vector(mode = "character", length = 3)
+v2
+```
+
+As we have told R only to create a vector of a specific length but not what the vector should contain R will create vectors with *default values*, i.e., zero in the case of `numeric` vectors and empty strings (`""`) in the case of character vectors. Notice as well that I've put a space after and before the `=` sign both for the assignment and for the specification of the `mode` of the vector. In general, this is a good rule to follow when you write your code (compare to `v2=vector(3,model="character")`).
+
+
+> **Style Suggestion** (*Specifying Options in Functions*)
+> 
+> - When specifying options, add a whitespace both before and after `=`
+
+We can verify whether an object is a vector, its mode, and length:
+
+``` r
+# check whether v1 is a vector
+is.vector(v1)
+
+# check length of vector v1
+length(v1)
+
+# check mode (i.e., data type) of vector v2
+class(v2)
+```
+
+Empty vectors are boring. So, let us create a vector that contains something:
+
+```r
+# assign sequence of integers to v3
+v3 = 1:5
+```
+
+Here `int1:int2` generates a sequence of integers starting from `int1` and ending with `int2`, where both `int1` and `int2` are included in the sequence. We can extract and/or replace elements of this vector by using square brackets:
+
+```r
+# extract the third element of the vector v3
+v3[3]
+
+# assign 2nd element of v3 to the object z
+z = v3[2]
+
+# replace 4th element of v3 with 10
+v3[4] = 10
+```
+(Notice that the index when assigning/extracting elements from R objects starts from 1 and not from 0).
+
+For vectors that contain numbers (i.e., are of mode `numeric` or `integer`), we can use the usual operations on vectors:
+
+```r
+# create a new vector
+v4 = c(2.3, 4.6, 1.2, 5.2, 1.4)
+
+# have a look at v4
+v4
+
+# add two vectors
+v3 + v4
+
+# element-wise multiplication
+v3 * v4
+```
+Here, the `c` is a function that concatenates/combines values into a vector. Element-wise multiplication means that we multiply the first element of `v3` with the first element of `v4`, the second element of `v3` with the second element of `v4`, and so on. Notice that this will result in another vector of the same length as both `v3` and `v4`, as you'll be able to see from your console. Also, note that for these operations to work, the vectors `v3` and `v4` need to have the same length. 
+
+We can also sum all the elements of a vector by using the `sum` function. Or, again, use the `c` function to concatenate the vectors into a long vector:
+
+```r
+# sum all elements of v3
+sum(v3)
+
+# concatenate the vectors v3 and v4
+c(v3, v4)
+```
+
+Before we move on, type `?sum` into your console and skim through the documentation of the function. It is okay if you don't understand what the documentation, the important point to remember is that you can always add a `?` in front of a function to search for its documentation.
+
+> **EXERCISE**
+> Let $\mathbf v$ and $\mathbf w$ be two $k$-length vectors that contains real numbers. This is often denoted $\mathbf v, \mathbf w\in \mathbb R^k$. The *inner product* (also called the *dot product*) between $\mathbf v$ and $\mathbf w$ is defined as
+> $$ \langle \mathbf v, \mathbf w \rangle = \sum_{i=1}^k v_iw_i = v_1w_1 + v_2w_2 + \cdots + v_kw_k,$$
+> where $v_i$ denotes the $i$th element of the vector $\mathbf v$. Let $\mathbf v = [1.2, 2.5, 1.7]$ and $\mathbf w = [3.0, 5.2, 0.2]$. Using R, calculate $\langle \mathbf v, \mathbf w \rangle$.
+>
+> *Hint*: Look closely into the equation. You'll see that we multiply the $i$th element of $\mathbf v$ with the $i$th element of $\mathbf w$, and we do that for every element. There after we sum up all these products.
+
+<br>
+
+## Matrices
+
+**Matrices** are the same as vectors except they have two dimensions (they are matrices after all). Similarly to vectors, their elements have to be of **the same data type**. You can create a $4 \times 4$ matrix with
+```r
+# create 4 X 4 square matrix
+m1 = matrix(nrow = 4, ncol = 4)
+m1
+```
+Again, as we have not told R what data the matrix should contain, R will fill all elements of the matrix with the *default value* `NA`, which stands for missing values (recall that for numeric vectors the default is `0` not `NA`). We can also create a matrix by directly feeding it with some numbers:
+```{r}
+# create 4 X 4 square matrix (fill by column)
+m1 = matrix(1:16, nrow = 4, ncol = 4)
+m1
+```
+Notice that the values are filled in what is called *column-major order*. If you want to fill the matrix row-by-row, you can specify the `byrow` option:
+```{r}
+# create 4 X 4 square matrix (fill by row)
+m2 = matrix(1:16, nrow = 4, ncol = 4, byrow = TRUE)
+m2
+```
+Notice that we have encountered our first `logical` data-type: namely `TRUE`. We will deal with logical data types more over the semester. For now, just keep in mind that logical data types can take on only three values: `TRUE`, `FALSE`, and `NA`.
+
+We can also create matrices by using other `vector`s (besides the sequences of numbers). Let me show you a quite messy code to do so, intentionally written in a nasty way:
+
+```r
+m3=matrix(c(1.2,4.5,6.2,43.6,100,234.1,13,4,42.1,63.0,234,92),nrow=4,ncol=3,byrow=TRUE)
+```
+
+It's really difficult to see what's going on, right? And I can assure you that the code that you'll be writing in the future will be even messier and longer. So, let us add a new style suggestion:
+
+> **Style Suggestion** (Multiple Arguments)
+>
+> If multiple arguments are specified in a function and the arguments are long, add one argument per line and indent the code, so that it is clear where the function starts and where it ends.
+
+An example would be the following:
+```r
+m3 = matrix(
+    c(1.2, 4.5, 6.2, 43.6, 100, 234.1, 13, 4, 42.1, 63.0, 234, 92),
+    nrow = 4,
+    ncol = 3,
+    byrow = TRUE)
+```
+or even better:
+```{r}
+m3 = matrix(
+    c(1.2, 4.5, 6.2, 
+      43.6, 100, 234.1, 
+      13, 4, 42.1, 
+      63.0, 234, 92),
+    nrow = 4,
+    ncol = 3,
+    byrow = TRUE)
+
+m3
+```
+
+Note that we have indented the code by four spaces to make clear that we are not yet finished; also, we have numbers to correspond to the actual matrix we want to construct; and all the arguments of the `matrix` functions are indented by the same amount to make clear at which "level" we are.
+
+> **Style Suggestion** (Indention)
+>
+> When indenting code, use four spaces.
+
+By the way, it is also fine to overrule the whitespace suggestions from above, it makes the code cleaner in these kind of situations. For example, it would be okay to use
+
+```r
+m3 = matrix(
+    c(1.2, 4.5, 6.2, 
+      43.6, 100, 234.1, 
+      13, 4, 42.1, 
+      63.0, 234, 92),
+    nrow  = 4,
+    ncol  = 3,
+    byrow = TRUE)
+```
+to bring all the `=` on the same line.
+
+Now, you can use `matrix` objects in R to do the usual operations in matrix algebra. For example,
+``` r
+# add two matrices
+m1 + m2
+
+# transpose a matrix
+t(m1)
+
+# element-wise multiplication of two matrices
+m1 * m2
+
+# matrix multiplication
+m1 %*% m2
+```
+Notice that `*` stands for element-wise multiplication, i.e., you multiply the $(i,j)$th element of `m1` with the $(i,j)$th element of `m2`. To get usual matrix multiplication, you have to use `%*%`.
+
+To combine matrices into bigger ones, you can use the `rbind` and `cbind` functions. `rbind` will combine matrices by stacking them on top of each other, given that the number of columns are the same. `cbind`, on the other hand, will stack them side-by-side. 
+
+```{r}
+rbind(m1, m2)
+cbind(m1, m2, m3)
+```
+
+You can also extract elements, whole rows, whole columns, or sub-matrices from matrix objects. This is called **subsetting**:
+```r
+# extract the (2,3)th element of the matrix m1
+# (i.e., that element that corresponds to the 2nd row and the 3rd column of m1)
+m1[2, 3]
+
+# get the 3rd row of m1
+m1[3, ]
+
+# get the 4th column of m1
+m1[, 4]
+
+# get a submatrix by extracting elements in the first two rows and the first two columns
+m1[1:2, 1:2]
+
+# you can also extract submatrices with row/colmun combinations that are not adjacent
+m1[c(1, 3), c(1, 4)]
+
+# or you can extract submatrices by extracting multiple rows/columns
+m1[, c(2, 3)]
+m1[3:4, ]
+```
+
+Two important things to notice: First, we can use both integers or vectors to extract elements from a matrix. Second, if you extract a *single* row or a column, R will return a `vector` not a `matrix`, while if you extract multiple row/columns it will return a `matrix`. 
+
+``` r
+is.matrix(m1)
+
+is.matrix(m1[, 3])
+is.vector(m1[, 3])
+
+is.matrix(m1[, 2:3])
+is.vector(m1[, 2:3])
+```
+
+Lastly, with respect to style, I would recommend the following:
+
+> **Style Suggestions** (*Subsetting*)
+> 
+> Let `x` be a matrix. When subsetting `x`, add a whitespace after the comma but **not** before it. For example, 
+>
+> - when extracting row(s) from `x`, use `x[2, ]` instead of `x[2,]`;
+> - when extracting column(s) from `x`, use `x[, 1]` instead of `x[ , 1]`;
+> - when extracting both row(s) and column(s) from `x`, use `x[1:2, 3:4]` instead of `x[1:2 , 3:4]` or `x[1:2,3:4]`.
+
+> **EXERCISE** Consider the matrix
+>
+> $$ \mathbf X = \begin{bmatrix} 1.2 & 4.2 \\ -4.1 & 0.5 \end{bmatrix}$$
+>
+> Using R
+>
+> 1. Create a matrix with the same elements and dimensions as $\mathbf X$.
+> 2. Ask your best friend Google how to calculate the inverse of a matrix in R.
+> 3. Calculate the inverse.
+
+<br>
+
+## Mixing Different Data Types
+
+Before we go over to functions in R, let me briefly explain what happens when you mix different data types in the same `vector` or `matrix`. I'll take the `vector` data structure as an example, but the same is true for matrices. 
+
+To give you the short answer: if you mix two different data types in the same vector, R will convert all elements into the *most general data type* that can support both of the data types.
+
+The order of generality of the data-types presented as follows:
+
+$$ \text{logical} \subset \text{integer} \subset \text{numeric} \subset \text{complex} \subset \text{character} $$
+
+That is, all data types can be represented as a `character` data type, all `logical` objects can be represented as `integer` or `numeric` data types, and so on. Thus, if you put both `logical` and `numeric` objects into the same vector, the resulting vector will be of mode `numeric`. Here are some examples:
+
+```{r, error = T}
+# mix logical and numeric types
+v1 = c(TRUE, FALSE, 1)
+class(v1)
+
+# mix numeric and character types
+v2 = c(3, 2, "1")
+class(v2)
+
+# try to add these two vectors (which are of the same length)
+v1 + v2
+```
+
+There three things to notice here. First, when R converts a logical type into a numeric or integer type, it will convert `FALSE` into `0` and `TRUE` into `1`. Second, *R will not tell you that the mode of a vector has been changed*. So, it's your responsibility to know what data types your objects consist of. Third, the last expression won't work because `v2` will be of `character`-vector for which arithmetic operations are undefined. 
+
+Why does R such a thing as converting data types without even asking? I have no idea. In fact, sometimes I wished R would at least warn us. What if we want to store data of different types in the same object? You can do this with `list`s and `data.frame`s. We'll get to those next week.
+
+> **EXERCISE** Suppose I create a `matrix` with data types `logical`, `integer`, and `complex`. What would be the resulting data type of the `matrix`?
+
+<br><br>
+
+# Functions in R
+
+<br>
+
+**Everything** in R is an object and **every** operation in R is a function call. We have met already many functions, such as `matrix` when we created a matrix, `=` when assigning values to objects, `c` to concatenate values or vectors, and so on. 
+
+A **function** is an R object that executes a specific task. A function consists of a *name*, a set of *arguments*, and a *return value*. It is very important to understand functions to use R efficiently. It makes your code much easier to interpret, reduces the errors when repeating the same operation, and is essential to *vectorize* your code (We'll talk more about vectorization throughout the course and why it's important for programming in R).
+
+The general structure of an R function looks like the following:
+
+``` r
+function_name = function(set_of_arguments) {
+
+    statement1
+    statement2
+    
+    ...
+    
+    return(value)
+
+}
+```
+
+Maybe the easiest way to start is by an example. Let us create a function that takes two R objects, adds them together, and multiplies the result by `0.5`:
+
+```{r}
+my_fun = function(x, y) {
+  
+  # first statement (add x and y)
+  sum_xy = x + y
+  
+  # second statement (divide the sum by 2)
+  res = 0.5 * sum_xy
+    
+  # return result
+  return(res)
+
+}
+```
+
+> **Style Suggestion** Use the `return` function to make clear when and what you are returning from your function.
+>
+> Note: This is not required for the function to work. For example, replacing the last line of the `my_fun` function from `return(res)` to `res` will give you exactly the same results. In addition, using the `return` function would envolve one additional function call. This is why some R users recommend *not* to use the `return` function. However, I believe that it makes the function definition clearer, especially as your function definition becomes more complex.
+
+Here `mu_fun` is the function's name, `x` and `y` are its arguments, and the final object that we `return()` is the return value. 
+
+Once you've executed the code, the object `mu_fun` will be stored in your R environment (in fact, I'll live in your *Global environment* to be specific, but we'll not deal with environments in this course). You can check also the *source code* of your function by typing the name of the function into your console:
+```{r}
+my_fun
+```
+
+Now, every time we want to add two R objects and then divide the result by 2, we can use `my_function`. Notice that we have not even specified what `x` and `y` are. They can be vectors, numbers, or even whole datasets. Regardless of the nature of `x` and `y`, R will simply execute the statements and return the results. If there are some operations involved that are inconsistent with the object types, R will simply throw an `error` or `warning`:
+
+```{r, error = TRUE}
+my_fun(x = 3, y = 5)
+my_fun(x = c(2.5, 1), y = c(10, 22))
+my_fun(x = 10, y = "hello")
+```
+
+It is important to understand that `x` and `y` here are just *place holders*, similarly to every other object in R. We would get exactly the same function had we named the arguments `a` and `b` instead of `x` and `y`. Consider, for example, the following function:
+```{r}
+my_fun_ab = function(a = 3, b = 5) {
+  
+  # add a and b
+  sum_ab = b + a
+  
+  # divide the sum by 2
+  res = 0.5 * sum_ab
+    
+  # return result
+  return(res)
+
+}
+```
+
+We can check that this function returns exactly the same results as `my_fun`:
+```{r}
+my_fun(1, 5)
+my_fun_ab(1, 5)
+```
+You'll also have noticed that the arguments in the first function were specified as `x, y`, but in the second function we've used `a = 3, b = 5`. This is to tell R what the *default arguments* of the function are. For example, not having specified any default values, our first function, when run without any arguments will lead to an error:
+```{r, error = TRUE}
+# run function without any arguments (default values not specified in function definition)
+my_fun()
+```
+For our second function, on the other hand, it will run just fine:
+```{r}
+# run function without any arguments (default values specified in function definition)
+my_fun_ab()
+```
+R will simply assign `3` to `a` and `5` to `b` (i.e., the default values) and execute the function, as we can check as follows:
+```{r}
+my_fun_ab(a = 3, b = 5)
+```
+What would happen if we feed `my_fun_ab` with only one object? It will assign the  object to the first argument and use the default value for the second. 
+```{r}
+my_fun_ab(a = 3)
+my_fun_ab(3)
+```
+Notice that the value `3` automatically assigned to the first argument of our `my_fun_ab` function in the second line of the code. This is also true for functions that have many more arguments. If you provide three values/objects for a function that has a total 10 arguments (assuming that default values are provided), then the three values/objects will be matched, in order, with the first three arguments of the function and default values will be used for the rest.
+
+<!-- > **EXERCISE** Write a function that with name `foo` that takes three arguments, `x1`, `x2`, `x3`, and calculates their mean. That is, the function should add the three objects together and divide the sum by the number of objects. Do not specify any default values. -->
+<!-- > -->
+<!-- > 1. Think about for what kind of R objects this function would work. Would it work if `x1` is a number, `x2` a vector, and `x3` a matrix? -->
+<!-- > 2. Create three `vectors` -->
+<!-- > $$ \mathbf a_1 = [1,2],\; \mathbf a_2 = [2,1],\; \mathbf a_3 = [2,2],$$ -->
+<!-- > where you may name the objects with whatever name you like -->
+<!-- > 3. Pass the three vectors into the function. What does the `foo` return? -->
+<!-- > 4. What is the data structure of the result?  What is the mode of the result? -->
+<!-- > -->
+<!-- > Write a new function `bar` with the same arguments as `foo`. But now, concatenate the three arguments `x1`, `x2`, and `x3` into a long vector. Name it `z`. Calculate the mean of the elements in `z`. Return the results. -->
+<!-- > -->
+<!-- > 1. Pass the objects that represent $\mathbf a_1, \mathbf a_2, \mathbf a_3$ into `bar`. -->
+<!-- > 2. What result do you get? -->
+<!-- > 3. What is the data structure of the result?  -->
+
+>**EXERCISE** Type `?rnorm` into your console and figure out what this function does. Write the following function:
+>
+> - The function name should be `my_norm2`
+> - The function should take 5 arguments: `n`, `mu1`, `sigma1`, `mu2`, `sigma2`
+> - Do not specify any default values for your arguments
+>
+> Within the function statemets, do the following:
+>
+> 1. Using the `rnorm` function, draw `n` variates from the normal distribution with mean `mu1` and standard deviation `sigma1`. Save these variates in the object `x1`. (Note: the `rnorm` function returns a `vector`)
+> 2. Again, using the `rnorm` function, draw `n` variates from the normal distribution; but this time with mean `mu2` and standard deviation `sigma2`. Save these variate in the object `x2`
+> 3. Create a matrix `m` where the first column is `x1` and the second column is `x2` 
+> 4. Return this matrix using the `return` function
+>
+> Lastly, generate the object `z` using your function:
+>
+> `z = my_norm2(n = 500, mu1 = 0, sigma1 = 2, mu2 = 0.5, sigma2 = 1.5)`
+
+
+<br>
+
+# Installing and Using Packages
+
+<br>
+
+## Installing Packages in R
+
+One of the strength of R is that there are a lot of packages you can use for your analysis. Most of the cutting-edge methods that have been developed are implemented in some R package, and it seems that the statistics community is moving away from `SAS` to R as their default platform (That's my impression, at least). 
+
+Throughout the course we will use two packages to handle data management. These are `data.table` and `dplyr`. You can download these packages using the `install.packages` function. For example, you can install the `data.table` package by typing
+
+```r
+install.packages("data.table", 
+                 dependencies = TRUE, 
+                 repos = "https://cran.rstudio.com")
+```
+
+The first argument specifies the name of package we want to install (this has to be entered as a string, i.e., enclosed in `"`s); the `dependencies = TRUE` argument says that we want to install also all R packages that the `data.table` package depends on (since R packages are built often from other packages); lastly, the `repos` argument specifies from where we want to download the package.
+
+Notice that we have explicitly entered the argument names for `dependencies` and `repos` but not for the first argument. Can you guess why (it's totally okay if you can't)? 
+
+Look into the documentation of the `install.packages` function. Recall that function arguments are matched in order. So, the first argument you pass will be assigned to `pkgs`. Now, if you would have passed `TRUE` without specifying the argument name, it would have been fed to the `lib` argument of the function, which we don't want. Hence, we have to explicitly tell R that we want to set `dependencies = TRUE` while using the default values for the other arguments (except for the `repos` argument).
+
+> **EXERCISE** Install the packages `dplyr` and `dtplyr`.
+
+## Using Packages in R
+
+Now that we have installed some packages, we want to use them. You can "load" a package via the `library` function (I have written "load" because what R actually does is `attach`ing the library to your `search()` path. I might have some time later in the course to explain what this means.) But before we do so, first try the following
+```r
+sessionInfo()
+```
+This function will summarize the information of your current R session. If something does not work in your code and you want to ask for help on the web (say, on www.stackoverflow.com), people will often ask for you **session information**. If so, you can show them what `sessioninfo()` prints out.
+
+It is totally fine if you don't understand everything that is shown in your `sessionInfo()` at this point. For now, pay attention to the fact that there are `attached base packages` and `loaded via a namespace (and not attached)` fields. 
+
+Now, load the `data.table` package:
+``` r
+library("data.table")
+```
+and look again into your `sessionInfo()`:
+```r
+sessionInfo()
+```
+You'll see that there is now a new field of `other attached packaes`. If something starting with `data.table` appears there, your package is successfully "loaded". From this point onward, you can use all the functions that the `data.table` package provides, just by typing their name. More on this later.

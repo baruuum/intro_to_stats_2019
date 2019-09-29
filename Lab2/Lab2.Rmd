@@ -1,0 +1,1004 @@
+---
+title: "Lab2 - Basics of Statistical Inference"
+author: "Barum Park"
+date: "9/20/2019"
+output: 
+    html_document:
+        keep_md: false
+        matjax: default
+        theme: yeti
+        highlight: textmate
+        toc: true
+---
+
+<style type="text/css">
+
+body{ 
+
+    font-size: 16px;
+    line-height: 1.7em;
+
+}
+
+blockquote {
+    padding: 10px 20px;
+    margin: 0 0 20px;
+    font-size: 16px;
+    border: solid 1px;
+}
+
+h1 { font-size: 32px; }
+
+h2 { font-size: 24px; }
+
+h3 { font-size: 20px; }
+
+.nobullet li {
+  list-style-type: none;
+}
+
+</style>
+
+<br>
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, 
+                      cache = FALSE,
+                      fig.align = "center",
+                      fig.width = 5,
+                      fig.height = 4)
+```
+
+# Outline
+
+Today's lab will deal with quite complicated stuff. I'm not sure whether we will be able to cover all the materials that I've prepared. If not, we'll continue with these materials the next lab. To warn you in advance, we'll have to deal with some concepts that might appear at first to be super complicated. The sad fact is that they *are* super complicated. The reason that I've stated them here (in their mathematical form) is not to scare you, nor are you asked to prove them. Rather, I'll try to explain them at an *intuitive* level by walking you through each term/component of the equations/definitions, step by step.
+
+Okay. Let us start with loading the data we've been working with the last lab. First, open your Rstudio project. If you have followed the instruction of the [last lab](http://htmlpreview.github.io/?https://github.com/baruuum/intro_to_stats_2019/blob/master/lab1/lab1.html), it should be saved in the `Labs` sub-directory that you are using for the Introduction to Statistics course under the name `Labs.Rproj`. That is, you should look for the file `your_IntroToStats_directory/Labs/Labs.Rproj`. If you have found `Labs.Rproj`, open it.
+
+As today is the second lab, let us create a new R script! Push `Ctrl + Shift + N` to open a new R script. Again, write a short description of what this script will do:
+
+```{r, eval = F}
+#### Title  : Lab 2
+#### Author : Baruuum
+#### Date   : Today
+```
+and push `Ctrl + s` to save it. As before, a small window will open that asks you where to save the new script. Create a new directory named `Lab2` (*Please! Don't put any whitespace between `Lab` and `2`!!*). Then, move into that directory and save the new script under the name `Lab2.R` (Again, *no whitespace!!*). 
+
+<br>
+
+# Name Conflicts
+
+Alright. We are ready to move on. In general, when you work in R, it is a good idea to load all packages that you'll use in the script at the top of your R script (In the last lab, we have not done this as I wanted to walk you through the installation; but in general you should always load packages at the top of your script.)
+
+Notice that *the order in which you attach the packages matters.* The reason for this is as follows: suppose you have two packages `pack1` and `pack2` which both contain the function `dup_func`. By attaching ("loading") the packages you will get access to the functions in the package. Now, if you use the function `dup_func` will it be the function of `pack1` or that of `pack2`? If you have attached `pack1` *after* `pack2`, calling the function `dup_func` will call the function of `pack1`; if you attach `pack2` after `pack1` it will be the function of `pack2`. For example, if your code looks like
+```r
+# loading pack2 *after* pack1
+library("pack1")
+library("pack2")
+
+...some code here...
+
+# call function dup_func on object x
+dup_func(x)
+```
+it will call the function of the `pack2` package, as it was loaded after `pack1`. Also, R will throw the following message right after you attach `pack2`:
+```
+The following object is masked from ‘package:pack1’:
+
+    dup_func
+
+```
+It means that the functions with name `dup_func` exist in both `pack1` and `pack2` and the `pack1` function `dup_func` was "masked" by that of "pack2". Of course, it is still possible to access the `dup_func` function of `pack1`: this can be done by calling `pack1::dup_func`.
+
+Masking of functions has several implications when writing your script, which we describe below as a style suggestion
+
+>**Style Suggestion** (Attaching Packages, Name Conflict)
+>
+>1. Be extremely careful with packages that have the same function names
+>2. If you have to use packages which include functions with the same names, make sure that you load them in the right order
+>3. Do not load unnecessary packages in your script (which might create naming conflicts between the functions. Even if you LOVE the package `ggplot2`, don't load it if you are not gonna use it.)
+>3. Load all packages that you need at the start of your code 
+>4. If there is a function, call it `great_function`, in package `mediocre_package` that you need to use, but you don't need any other function of the `mediocre_package` package, don't attach("load") the whole package, but instead use `mediocre_package::great_function` to call the function when needed.
+
+<br>
+
+# When Your Code Doesn't Work
+
+Let us recap first what we've done at the end of the last lab. First, let us attach a set of packages that we'll need:
+```{r, message = F, eval = T}
+# load packages
+library("here")
+library("data.table")
+library("ggplot2")
+```
+Next, we load the `simdat.csv` dataset. Recall that we saved this file in the `your_project_directory/Lab1/` directory. Use the `here` function to load the data into your R session:
+```{r}
+# read in data
+pop = fread(here("Lab1", "simdat.csv"))
+```
+
+First, let us replicate the last results we had in the first lab. We'll simulate the sampling distribution of the sample mean of `x1` from the dataset `pop`:
+
+```{r eval=FALSE}
+# set seed
+set.seed(12345)
+
+# number of times to sample
+n_rep = 5000
+
+# population and sample sizes
+N = nrow(pop)
+n = 50
+
+# create empty vector to store results
+mean_samp = numeric(length = n_rep)
+
+# start loop to sample repeatedly
+for (i in 1:n_rep) {
+    
+    # sample from population & calculate sample mean
+    mean_samp[i] = pop[sample(1:N, n, replace = F), mean(x1)]
+    
+}
+
+# plot results
+ggplot(data.table(means = mean_samp), aes(x = means)) + 
+    geom_histogram( 
+        bins = 50, 
+        col = "white",
+        fill = "darkmagenta",
+        alpha = .6
+    ) + 
+    lims(x = c(-1.25 3.25)) + 
+    labs(y = "Frequency", x = "") + 
+    geom_vline(xintercept = mu) + 
+    ggtitle(                         # notice this code is new
+      paste("Sampling Distribution of Sample Mean (n = ",
+             n, ")", sep = "")
+    ) + 
+    theme_bw() 
+```
+```{r eval = T, echo = F}
+# set seed
+set.seed(12345)
+
+# number of times to sample
+n_rep = 5000
+
+# population and sample sizes
+N = nrow(pop)
+n = 50
+
+# create empty vector to store results
+mean_samp = numeric(length = n_rep)
+
+# start loop to sample repeatedly
+for (i in 1:n_rep) {
+    
+    # sample from population   
+    mean_samp[i] = pop[sample(1:N, n, replace = F), mean(x1)]
+
+}
+```
+You'll see that this code won't work. But why? If there is one truism in coding, it's that computers don't lie. If R is telling you that there is something wrong, it's you who has done it wrong. So, let's figure out where we made a mistake. The process of doing so is called **debugging**. There are many tools that can help you with debugging your code; here we'll use the most straightforward way: running the code line-by-line and reading error messages carefully.
+
+The easiest way to figure out *where* your code is not working is to run the code line-by-line. If you do so, you'll see that it's the `ggplot` function where something is wrong. Also, it will throw two errors: 
+```
+Error: unexpected numeric constant in:
+"    ) + 
+    lims(x = c(-1.25 3.25"
+```
+and
+```
+Error in new_data_frame(list(xintercept = xintercept)) : 
+  object 'mu' not found
+```
+Reading these error messages carefully is really important.
+
+## Unexpected Numeric Constant
+
+Let us tackle the first error message first. The message tells you that R `expected` something else than a `numeric constant` in the code chunk `lims(x = c(-1.25 3.25`. After reading this message, you'll either immediately see what went wrong or you will remain equally clueless. 
+
+In the latter case, notice that the error message suggests that it's somewhere near the `lims` function that the error has occurred. Just to make sure, let us first run a shorter/simpler code by dropping everything before `lims()` appears:
+```{r}
+ggplot(data.table(means = mean_samp), aes(x = means)) + 
+    geom_histogram( 
+        bins = 50, 
+        col = "white",
+        fill = "darkmagenta",
+        alpha = .6
+    )
+```
+So, everything is working fine in this case. But if we add the `lims()` part back in
+```{r eval = F}
+ggplot(data.table(means = mean_samp), aes(x = means)) + 
+    geom_histogram( 
+        bins = 50, 
+        col = "white",
+        fill = "darkmagenta",
+        alpha = .6
+    ) + 
+    lims(x = c(-1.25 3.25))
+```
+we see the same error message. So, it is indeed the `lims()` part where the code went wrong. 
+
+Again, after confirming that `lims()` is where we did a mistake, it will become clear *what* went wrong, or we still won't have a clue. In the case you still don't know, a good option is to look at a code which *did* work in the past. Fortunately, we have such a code prepared: in the [materials of the last lab](https://htmlpreview.github.io/?https://github.com/baruuum/intro_to_stats_2019/blob/master/lab1/lab1.html#populations-samples-and-sampling-distributions), we created a similar plot. If you compare the second-to-last code chunk with the code we are running here, you'll see that we forgot to add a comma between `-1.25` and `3.25`. So, what the first error message was telling us is that R was expecting to find something else than two numbers separated by a whitespace in `lims(x = c(-1.25 3.25`. But is it the `lims` function, the `x = ` part, or the `c()` part that is throwing an error? To figure this out, you can work from the inside-outwards. First, try 
+```
+c(-1.25 3.25)
+```
+and you'll see it throws exactly the same error as we've seen above. This makes it highly likely that the error comes from the `c()` function. 
+
+Now, adding a comma to the code chunk will erase the first error and leave only the second error:
+```{r eval = F, error = T}
+ggplot(data.table(means = mean_samp), aes(x = means)) + 
+    geom_histogram( 
+        bins = 50, 
+        col = "white",
+        fill = "darkmagenta",
+        alpha = .6
+    ) + 
+    lims(x = c(-1.25, 3.25)) + 
+    labs(y = "Frequency", x = "") + 
+    geom_vline(xintercept = mu) + 
+    ggtitle(
+      paste("Sampling Distribution of Sample Mean (n = ",
+             n, ")", sep = "")
+    ) + 
+    theme_bw() 
+```
+
+## Object Not Found
+
+The second error says 
+```
+Error in new_data_frame(list(xintercept = xintercept)) : 
+  object 'mu' not found
+```
+This might be a little bit confusing because we never used a function called `new_data_frame()`. The reason you see this error is because, whenever you call the `ggplot` function, it will call further functions to generate the plot you've asked for. Among those functions that `ggplot` calls is a function with the name `new_data_frame` which is causing us trouble here.
+
+But rather than figuring out what this function is, let us focus on the other part of the error message: it tells us that R has trouble finding an object called `mu`. We see that `mu` appears in the `geom_vline()` function, and if our memory is not all too bad, we will recall that we never created an object named `mu` in our session (we created it only in the first lab, not today!)
+
+To make sure that `mu` indeed does not exist in our current session, we can try out two things: the most straightforward one is to simply run
+```{r eval = F}
+mu
+```
+You'll see that the same error message is returned, meaning that `mu` is not in our current environment. Another way to check this is to run the `ls()` function, which returns all R objects in our current session as a character vector:
+```{r}
+ls()
+```
+We see that there is no `mu` in our environment. Let us create one!
+```{r}
+# create object mu, store population mean
+mu = pop[, mean(x1)]
+```
+Let us check `ls()` again, whether the `mu` object is now in our R environment. 
+```{r}
+ls()
+```
+After this, the `ggplot` function should work fine:
+```{r}
+ggplot(data.table(means = mean_samp), aes(x = means)) + 
+    geom_histogram( 
+        bins = 50, 
+        col = "white",
+        fill = "darkmagenta",
+        alpha = .6
+    ) + 
+    lims(x = c(-1.25, 3.25)) + 
+    labs(y = "Frequency", x = "") + 
+    geom_vline(xintercept = mu) + 
+    ggtitle(
+      paste("Sampling Distribution of Sample Mean (n = ",
+             n, ")", sep = "")
+    ) + 
+    theme_bw() 
+```
+
+## Unexpected Warning
+
+Or, at least, that was what I've believed. Yet, R complains again that it `Removed 2 rows containing missing values (geom_bar)`. This is not an **error** but a **warning**, meaning that something went not according to plan but R was still able to execute the code chunk. Sometimes warnings are just fine but in other situations this lead to unexpected results. So, it is really important to heed to the warning messages and make sure that everything is indeed okay. To be honest, I was a little bit confused by this warning as well. So, let us investigate why R is complaining.
+
+First, and most importantly, it could be the case that we specified the x-axis limits too narrowly: by chance, it might have happened that two of the simulated sample means lie outside of the interval $(-1.25, 3.25)$. This would lead to such a warning, because R would not plot these two sample means within the range that we have specified for the plot. So it is important to check the range of the variable we are plotting. We can do this by the `summary` function, with which we should, by now, be quite familiar:
+```{r}
+summary(mean_samp)
+```
+As the minimum and maximum of `mean_samp` are contained in the specified x-axis range, we can rest assured that we are not dropping outlying observations. 
+
+Another possibility for why R is complaining might be related to the number of bins we have specified for the histogram. 50 bins seem to be okay, but maybe they are not enough. Let us try to increase the bins of the histogram:
+```{r}
+ggplot(data.table(means = mean_samp), aes(x = means)) + 
+    geom_histogram( 
+        bins = 100,           # bins increased from 50 to 100 
+        col = "white",
+        fill = "darkmagenta",
+        alpha = .6
+    ) + 
+    lims(x = c(-1.25, 3.25)) + 
+    labs(y = "Frequency", x = "") + 
+    geom_vline(xintercept = mu) + 
+    ggtitle(
+      paste("Sampling Distribution of Sample Mean (n = ",
+             n, ")", sep = "")
+    ) + 
+    theme_bw() 
+```
+So, this was the problem!
+
+## Debugging `for` loops
+
+Debugging `for` loops might be sometimes painful. For example, consider the next code snippet:
+
+```{r}
+# create a random vector of integers between -1 and 5
+rand_vec = sample(-1:5, 30, replace = T)
+
+# a scalar
+my_scalar = 1
+
+# multiply my_scalar by the log of the ith element of rand_vec
+for (i in 1:30) {
+  
+    my_scalar = my_scalar + log(rand_vec[i])
+    
+}
+
+# print result
+print(my_scalar)
+```
+We see a bunch of warning messages that `NaN`s are produced and our end result is a `NaN` as well. `NaN` in R stands for "Not A Number." But, say, we don't want `NaN`s! What should we do? Where did the code go wrong?
+
+Some of you will immediately understand what we did wrong, even without running the loop. But let us assume that we have no clue. There are a few steps that can be helpful here
+
+1. If the loop stops (which is not the case in our example), you can always check what your is contained in your iterator variable `i`. For example, if you check `i` and its value is equal to `12`. You'll know that the loop worked fine up to the `11`th iteration, but then broke down at the `12`th.
+
+2. In our case, the loop worked without breaking down but the results are not what we expected. Any mathematical operation with a `NaN` will result again in a `NaN` (If you add a number with something which is not a number, you'll probably get not a number back). So, the task is to figure out when the first `NaN` appeared. We can do this by extending the code a little bit, and using the `is.nan()` function, which returns `TRUE` if the argument is `NaN` and `FALSE` otherwise.
+    ```{r}
+    # a scalar
+    my_scalar = 1
+    
+    # multiply my_scalar by the log of the ith element of rand_vec
+    for (i in 1:30) {
+      
+        my_scalar = my_scalar + log(rand_vec[i])
+        
+        # add a line to check whether my_scalar results in a Nan
+        if (is.nan(my_scalar)) {
+          
+            break
+          
+        }
+        
+    }
+    ```
+    We've encountered a new, very important function. Namely the `if` statement. The `if` statement has the following structure:
+    ```{r eval = F}
+    if (condition) {
+    
+        ...code to execute when condition is TRUE...
+    
+    }
+    ```
+    So, in the example above, if `is.nan(my_scalar)` evaluates to `TRUE`, R will execute the `break` function. `break` tells R to break the loop immediately. When executing the new code, we see that only one `NaN` was produced. Looking at the value of our iterator `i`, we see that it has a value of `10`.
+    ```{r}
+    # check value of iterator
+    print(i)
+    ```
+    So, the problem occurred when dealing with the `10`th element of `rand_vec`. We can check whether this is indeed true:
+    ```{r}
+    # check value of 3rd element of rand_vec
+    print(rand_vec[10])
+    
+    # check logarithm of this element
+    log(rand_vec[10])
+    ```
+    So, the problem was that we tried to compute the logarithm of a negative number. Logarithms are defined only for positive numbers, so R didn't know what to do with `log(-1)` and decided that the result is not a number at all. Now, to fix the loop to get a number as the end result will involve some arbitrary decisions. We might arbitrarily say that `log(x) = -1000` for all negative numbers, or we can just skip all elements of `rand_vec` that are negative. The decision will depend on the application. Here I just tried to show you a quite rudimentary way identify where in a loop something went wrong.
+   
+Anyways, I hope this shows you a glimpse into debugging R code. Of course, this is just a tip of the ice berg. The more you become familiar with R, the better you will be in debugging codes and understanding error message. Whenever you hit a wall, don't be too frustrated. It is an experience that everyone, coding in whatever language, has to go through.
+
+<br>
+
+# The Central Limit Theorem
+
+The sampling distribution of the sample mean of `x1` looks curiously close to a Normal distribution. Indeed, as you've learned in the last class, this is not a coincidence. Namely, **Central Limit Theorem** (CLT) assures that, regardless of the shape of the population distribution, the sampling distribution of the sample mean of a sequence of independent and identically distributed random variables will converge to a Normal distribution as the sample size increases. Let us state this formally:
+
+> **Central Limit Theorem** Let $\{X_1, X_2, ..., X_n\}$ be a sample of independent and identically distributed random variables with mean $\text{E}[X_i] = \mu$ and variance $\text{E}[X_i] = \sigma^2 < \infty$. Let $\bar X_n = n^{-1} \sum_{i=1}^n X_i$ be the sample mean. Then $\sqrt{n}(\bar X_n - \mu) / \sigma$ converges to a random variable $Z$ which is distributed Normally with mean equal to zero and variance equal to one as the sample size $n$ grows infinitely large. 
+
+I believe that this description of the CLT will even cause confusion among those of you who thought to have understood the theorem. Let me break the description down, so we are all on the same page. 
+
+1. First, it is important to understand the difference between a *random variable* and its *realized value*. What we analyze in R is often the realized value of a random variable: once we collect some data, there is nothing random anymore. All the values in our samples are already realized. On the other hand, we can think of a situation where we are *planning* to collect a sample of size $n$. We do not know *a priori* what values $\{X_1, X_2, ..., X_n\}$ will take on. We know only that we are going to collect $n$ values. That is what we mean that the sample $\{X_1,X_2,..., X_n\}$ is a collection of random variables.
+
+2. Second, when all of the $X_i$'s in the sample are random, what is their distribution? Let us consider a simple case. Suppose that the population consists of two groups, $1$ and $0$, and we sample a *single* individual from this population. So, our random sample consists of a single variable $X_1$, rather than a whole collection of random variables. Say the population proportion of group $1$ is $70\%$ and that of group $0$ is $30\%$. Then, if we sample an individual randomly from this distribution, his/her probability of belonging to group $1$ will be $0.7$ and that of belonging to group $0$ will be $0.3$. *This is the distribution of $X_1$*. Formally, we can say that $X_1$ follows a Bernoulli distribution with parameter $\pi = 0.7$ (remember the coin-flip example). 
+
+3. But we have a whole collection of $n$ random variables in our random sample $\{X_1,X_2,...,X_n\}$. Saying that these random variables are identically distributed basically means that we are sampling all of them from the *same population.* Thus, each individual will have a probability of $0.7$ of belonging to group $1$. Further, we are sampling them independently, so that the probability of $X_1 = 1$ does not depend on the probability of $X_2 = 1$. Taken together, 
+    1. all of our individuals have the same probability of belonging to group $1$ and 
+    2. the probability of one of them belonging to group $1$ does not depend on the probability that another one in our sample belongs to group $1$
+    
+    This is what we mean by *independently and identically distributed.* We also often say that the $X_i$, $i = 1,2,...,n$, are **iid** random variables.
+    
+4. The assumption that $\text{E}[X_i] = \mu$ and $\text{Var}[X_i] = \sigma^2 < \infty$ is saying that the mean of *each variable* in our sample is equal to the same value $\mu$ and that their variance is equal to $\sigma^2$ (which is finite). If the variables come from the same population, this should be trivially true (i.e., the probability of each individual belonging to group $1$ should be the same), so this statement is rather there for the purpose of introducing notation and making clear that the population distribution of $X$ has a finite variance.
+
+5. Next, the sample mean $\bar X_n$ is a random variable itself. That is, as we don't know *a priori* what value the $\{X_1, X_2, ..., X_n\}$ will take on, we don't know what their mean will be; also, as $\{X_1,X_2...,X_n\}$ has a distribution, so will the sample mean have distribution. Lastly, regardless of what realized values we observe *in any particular sample*, we can think of the operation of summing $\{X_1,X_2...,X_n\}$ up and dividing the sum by the sample size, which is $\bar X_n$. 
+
+6. Lastly, the theorem tells us that for very large samples, the statistic, again being a random variable, $Z = \sqrt{n}(\bar X_n - \mu) / \sigma$ will follow a Normal distribution with mean equal to zero and variance equal to one. In other words, the sampling distribution of $Z$ will have a standard Normal distribution.
+
+The Central Limit Theorem is probably the **most important theorem** in statistics that you'll encounter. The very reason for its name is probably due to its "central" role it plays in statistics (see, for example, [here](https://mathoverflow.net/questions/44132/what-are-central-limit-theorems-and-why-are-they-called-so)). Because it's importance, I urge you to remember the results of the theorem, even if you are not able (at least for now) to understand it completely. 
+
+>**MEMORIZE THIS (even if you were not able to follow the exposition above)** Let $\{X_1, X_2, ..., X_n\}$ be a sample of independent and identically distributed random variables with mean $\text{E}[X_i] = \mu$ and variance $\text{E}[X_i] = \sigma^2 < \infty$. Then, the sample mean
+  $$\bar X_n = \frac{1}{n} \sum_{i=1}^n X_i,$$
+being a function of the random variables $\{X_1, X_2, ...,X_n\}$ is a random variable itself. Further, as the sample size grows to infinity, the distribution of $\frac{\bar X_n - \mu}{\sigma/\sqrt{n}}$ converges to a standard Normal distribution, i.e., a Normal distribution with mean zero and variance one.
+
+In practical terms, we are often not so much interested in $\frac{ \bar X_n - \mu}{\sigma/\sqrt{n}}$ but rather the distribution of $\bar X_n$ itself. Technically speaking it is **wrong** to say that $\bar X_n \sim \text{Normal}(\mu, \sigma^2/n)$ as $n$ grows to infinity. The reason is simple: if $n$ grows to infinity $\sigma^2/n$ would go to zero, and ${X}_n$ would converge to the constant $\mu$ (recall the Law of Large Numbers). However, in a very *informal way*, we might think of the Central Limit Theorem as saying that the sample mean will more and more look like a Normal distribution with mean $\mu$ and variance $\sigma^2/n$ in large samples.
+
+Now it seems to make at least some sense that the simulated sampling distribution of the mean of `x1` had a bell-shaped curve. On the other hand, the CLT is an *asymptotic result*---i.e., a result that holds in the limit as $n \rightarrow \infty$. That we are already able to see a bell-shaped curve in the simulated sampling distribution is therefore quite surprising. 
+
+We might also try to overlay a theoretically derived Normal density curve over the sampling distribution. We first calculate the mean and variance of the population and use the (infomal) formula in the CLT to plot the curve:
+```{r}
+# Note: we already have the population mean of x1 stored in the object mu. So, we calculate only the population variance. Notice as well that we have used 5000 simulation runs, but the "sample size" in each of the run was n = 50. 
+sigma_sq = pop[, var(x1)]
+
+# to plot a theoretical distribution, we need to use ggplot2::stat_function. This function will plot a function that we provide. To plot a Normal density curve, we will use the dnorm() function. The arguments (mean and sd) are provided through a list-object.
+
+ggplot(data.table(means = mean_samp), aes(x = means)) + 
+    geom_histogram(
+        aes(y = ..density..), # <- to change y axis from frequencies to density 
+        bins = 100,
+        col = "white",
+        fill = "darkgrey", # change color
+        alpha = .6
+    ) + 
+    stat_function(           # code to plot theoretical normal distribution
+        fun = dnorm,         # with mean mu and variance sigma_sq/n
+        args = list(mean = mu, sd = sqrt(sigma_sq / n)),
+        col = "darkmagenta"
+    ) +
+    lims(x = c(-1.25, 3.25)) + 
+    labs(y = "Density", x = "") + # changing y-axis label
+    geom_vline(xintercept = mu) + 
+    ggtitle(
+      paste("Sampling Distribution of Sample Mean (n = ",
+             n, ")", sep = "")
+    ) + 
+    theme_bw() 
+```
+
+This looks really close even though we have only a sample size of $n = 50$. ( Recall that the population distribution of the variable `x1` had three modes and looked really different from a Normal distribution.)
+
+## Sampling Distribution of Sample Median
+
+As you have learned, not only the sample mean but *any statistic that you calculated on a sample is a random variable* and thus has a sampling distribution. As we know the population distribution, we might also try to figure out how the sample median behaves over repeated samples.
+
+The R code to study the sampling distribution of the sample median is almost exactly the same as that we used to study the sampling distribution of the mean:
+```{r}
+# NOTE: recall that we have already set the random seed above. The objects n_rep, N, and n where defined above as well. So we don't need to specify them again. However, we need a new "empty container," since otherwise we would overwrite the object that was used to store the samples of the sample means.
+
+# create a new empty vector to store results
+med_samp = numeric(length = n_rep)
+
+# start loop to sample repeatedly
+for (i in 1:n_rep) {
+    
+    # sample from population   
+    med_samp[i] = pop[sample(1:N, n, replace = F), median(x1)]
+
+}
+
+# calculate the population median
+theta = pop[, median(x1)]
+
+# plot sampling distribution of the sample median
+ggplot(data.table(medians = med_samp), aes(x = medians)) + # note changes here
+    geom_histogram( 
+        bins = 100,         
+        col = "white",
+        fill = "darkmagenta",
+        alpha = .6
+    ) + 
+    lims(x = c(-1.25, 3.25)) + 
+    labs(y = "Frequency", x = "") + 
+    geom_vline(xintercept = theta) + # changing the vertical line to pop median
+    ggtitle(
+      paste("Sampling Distribution of Sample Median (n = ",
+             n, ")", sep = "")
+    ) + 
+    theme_bw() 
+```
+The sampling distribution of the sample median hovers around the sample median. But it has not the nice bell-shaped distribution as the sampling distribution of the sample mean. 
+
+If we compare the mean of sampling distributions of the two statistics with their corresponding population parameters, we get
+```{r}
+# compare mean of sampling distribution of sample mean with population mean
+print(c(mean(mean_samp), mu))
+```
+which is quite close (!) and
+```{r}
+# compare mean of sampling distribution of sample median with population median
+print(c(mean(med_samp), theta))
+```
+which is close as well, but not as close as in the case of the sample mean. This leads to the following questions, which we are, unfortunately, not able to answer in a rigorous manner. But let us at least try to guess.
+
+> **EXERCISE** What is your best guess for the following questions:
+> 
+> 1. Is the sample mean an unbiased estimator of the population mean? Why?
+> 2. Is the sample median an unbiased estimator of the population median? Why?
+> 3. Is the sample mean an unbiased estimator of the population median? Why?
+> 
+> And two bonus questions:
+>
+> 1. Under what circumstances would be the sample mean an unbiased estimator of the population median?
+> 2. Why has the sampling distribution of the sample median a bimodal shape in our plots while the sample mean shows a bell-curve?
+
+
+<br>
+
+# Standard Errors and Confidence Intervals
+
+## Standard Errors
+
+As you've learned in class the **standard error** of a statistics is the standard deviation of its sampling distribution. (Note: There is some ambiguity in the terminology here, since the term standard error is used to refer to the "true" standard deviation of the statistics' sampling distribution as well as an estimate of it.) We have tried to approximate the sampling distribution of the sample mean by emulating the process through which the sample is created multiple times. Notice that this procedure required *perfect* information of the population (otherwise, we would not have been able to sample from the population). 
+
+Now, the Central Limit Theorem gives us another way to approximate the sampling distribution of the mean. It tells us that the sample mean should be approximately distributed as a Normal distribution with mean equal to the population mean and variance equal to the variance of the population divided by the size of our sample. Hence, we might compare the two approximations to the standard error of the sample mean of `x1`:
+```{r, eval = T}
+paste(
+  "Estimated Standard Error based on Simulation :",
+  round(sd(mean_samp), 3) # round(num, 3) rounds num to the third decimal point
+)
+
+paste(
+  "Estimated Standard Error based on CLT (sigma_sq known) :",
+  round(sqrt(sigma_sq / n), 3)
+)
+```
+
+The only problem that remains to rely on the Central Limit Theorem to get an estimate of the standard error is that we don't know the population variance. Instead, we have to estimate $\sigma^2$ from our sample. A natural candidate for doing so would be the sample variance:
+
+$$S_n^2 = \frac{1}{n - 1}\sum_{i=1}^n (X_i - \bar X_n)^2.$$
+
+Again, we notice that $S^2$, being a function of $\{X_1,...,X_n\}$ is a random variable and will have a distribution. Deriving the distribution of $S_n^2$ is a bit complicated, so we won't go into the details here. We note however, without proof, that $\text{E}[S_n^2] = \sigma^2$ and that $S_n^2$ converges to $\sigma^2$ when the sample size grows large under some reasonable assumptions. So, when we estimate the standard error $\sigma/\sqrt{n}$, we use the sample standard deviation divided by the square root of the sample size, i.e., $S_n/\sqrt{n}$, where $S_n = \sqrt{S_n^2}$.
+
+>**EXERCISE** By repeatedly sampling from `pop` a sample of size `n = 50`, show that the mean of the sampling distribution of $S_n^2$ is equal to $\sigma^2$. 
+>
+> 1. Use 1000 simulation runs.
+> 2. Sample the variable `x1`.
+> 3. Use the function `var` to calculate the sample variance.
+
+```{r eval = F, echo = F}
+# create empty vector to store results
+var_samp = numeric(length = 2000)
+
+# start loop to sample repeatedly
+for (i in 1:2000) {
+    
+    # sample from population & calculate sample mean
+    var_samp[i] = pop[sample(1:N, n, replace = F), var(x1)]
+    
+}
+
+# population variance
+pop_var = pop[, var(x1)]
+
+# compare population variance and the mean of sampling distribution
+print(c(mean(var_samp), pop_var))
+
+# plot results
+ggplot(data.table(vars = var_samp), aes(x = vars)) + 
+    geom_histogram( 
+        bins = 50, 
+        col = "white",
+        fill = "darkmagenta",
+        alpha = .6
+    ) + 
+    labs(y = "Frequency", x = "") + 
+    geom_vline(xintercept = pop_var) + 
+    ggtitle(                         # notice this code is new
+      paste("Sampling Distribution of Sample Variance (n = ",
+             n, ")", sep = "")
+    ) + 
+    theme_bw() 
+
+```
+
+## Confidence Intervals
+
+As $S_n^2$ converges to $\sigma^2$ in large samples, we can approximate the sampling distribution of the sample mean with a $\text{Normal}(\mu, S_n^2/n)$ distribution. The standard deviation of this distribution---namely, the standard error of the sample mean---gives us some estimate of the uncertainty we have about our estimator. But we can go one step further calculate *random intervals* that will contain the true population mean with a certain probability. These intervals are called **confidence intervals**. 
+
+Confidence intervals (CI) are calculated from a random sample, so they are *random* intervals themselves. To create a confidence interval, we first define the probability with which the interval should cover the true parameter over repeated samples. For example, we can create 95% confidence intervals, 90% confidence intervals, or 50% confidence intervals. 
+
+Let me be clear about what I mean by the "probability that the interval contains the true parameter (i.e., the population mean in our case)": if we were to repeatedly draw samples with the same sample size from the same population and calculate the interval using the same formula on each of these samples, the true parameter of interest will lie in a proportion of $(1-\alpha)$ of these intervals, where $\alpha$ is often chosen to be a small number between zero and one. For example, if $\alpha = 0.05$ the random interval is called a 95% CI, if $\alpha = .10$ it is called a 90% CI and so on. This sounds a little bit weird, but it will make sense if you think long enough about it. For example, if you obtain a sample from the population and calculate a confidence interval based on the *observed sample*, the true parameter will either lie within that sample or not with probability one; there is no randomness involved anymore once you have observed a sample. Yet, you can think of doing the same thing an infinite number of times on different samples that were drawn in the same way from the population as the one you are observing and ask "what proportion of the intervals I have created in this way would contain the true parameter?" In the case of a 95% CI, this long-run proportion should be 0.95.
+
+Now, to create a 95% CI from a random sample $\{X_1, X_2,..., X_n\}$, we first note that for large $n$, 
+
+$$Z = \frac{\bar{X}_n - \mu}{S / \sqrt{n}} \sim \text{Normal}(0,1).$$
+
+Further, as the standard Normal distribution is symmetric about zero, we can find a number $z_{\alpha/2}^\ast$ such that $\Pr[- z_{\alpha/2}^\ast < Z < z_{\alpha/2}^\ast] = 1 - \alpha$ (see plot below). 
+```{r echo = F}
+x = seq(from = - 4, to = 4, by = .01)
+tmp_df <- data.table(x = x, y = dnorm(x))
+
+ggplot(tmp_df, aes(x = x, y = y)) + 
+  geom_area(
+      data = tmp_df[x >= -1.96 & x <= 1.96],
+      aes(y = y), 
+      fill = "darkmagenta", 
+      color = NA, 
+      alpha = .3
+  ) + 
+  geom_text(
+      data = data.table(
+        x = c(-2.3, 2.3),
+        y = c(.3, .3),
+        labs = c("-z*", "z*")
+      ), 
+      aes(x = x, y = y, label = labs)
+  ) +
+  geom_line(col = "darkgrey") +
+  geom_vline(xintercept = 1.96, col = "grey", lty = 2) +
+  geom_vline(xintercept = -1.96, col = "grey", lty = 2) +
+  scale_y_continuous(
+      breaks = NULL, 
+      expand = expand_scale(mult = c(0, .1))
+  ) +
+  theme_bw() +
+  labs(x = "", y ="") + 
+  theme(panel.grid = element_blank())
+```
+Let $\widehat{\text{SE}}(\bar X_n) = S_n/ \sqrt{n}$ be our estimator of the standard error. By basic algebraic manipulations, we obtain
+
+$$
+\begin{aligned}
+&\Pr\left[-z_{\alpha/2}^\ast \le \frac{\bar{X}_n - \mu}{\widehat{\text{SE}}(\bar X_n)} \le z_{\alpha/2}^\ast\right] \\
+&= \Pr\left[-z_{\alpha/2}^\ast \widehat{\text{SE}}(\bar X_n) \le \bar{X}_n - \mu \le z_{\alpha/2}^\ast \widehat{\text{SE}}(\bar X_n)\right] \\
+&= \Pr\left[- \bar{X}_n-z_{\alpha/2}^\ast \widehat{\text{SE}}(\bar X_n) \le - \mu  \le  - \bar{X}_n +  z_{\alpha/2}^\ast \widehat{\text{SE}}(\bar X_n)\right] \\
+&= \Pr\left[ \bar{X}_n-z_{\alpha/2}^\ast\widehat{\text{SE}}(\bar X_n) \le \mu  \le   \bar{X}_n +  z_{\alpha/2}^\ast \widehat{\text{SE}}(\bar X_n)\right].
+\end{aligned}
+$$
+
+Thus, under the assumption that  $Z \sim \text{Normal}(0,1)$, there must exist a number $z_{\alpha/2}^\ast$ such that the random interval
+
+$$ (\bar{X}_n-z_{\alpha/2}^\ast\widehat{\text{SE}}(\bar X_n),  \bar{X}_n +  z_{\alpha/2}^\ast \widehat{\text{SE}}(\bar X_n))$$
+
+contains the population mean $\mu$ with probability $1-\alpha$. The only thing that remains is to figure out what this number $z_{\alpha/2}^\ast$ is. As the standard Normal distribution is symmetric, $z_{\alpha/2}^\ast$ must be the number so that $\Pr[Y \le z_{\alpha/2}^\ast] = 1 - \alpha/2$ (can you see why?), which shows that $z_{\alpha/2}^\ast$ corresponds to the $(1-\alpha/2)$ quantile of the standard Normal distribution. This number can be found by using the `qnorm()` function in R:
+```{r}
+# alpha level
+alpha = 0.05
+
+# z*
+qnorm(1 - 0.5 * alpha, mean = 0, sd = 1)
+```
+
+So, $z_{\alpha/2}^\ast \approx 1.96$ Hence, we conclude that the interval
+
+$$(\bar{X}_n-1.96* \widehat{\text{SE}}(\bar X_n) ,  \; \bar{X}_n +  1.96*\widehat{\text{SE}}(\bar X_n))$$
+
+will contain the parameter $\mu$ with probability approximately $1- \alpha = 0.95$.
+
+What we have established so far all depends on the assumption that the Normal distribution will be a good approximation to the true sampling distribution of the sample mean. But we might ask how good this approximation really is. From the plot we have created when discussing the Central Limit Theorem, it seems that the approximation will be quite good. But let us check this directly via simulation. The simulation is very similar to the ones we have done so far. The only difference is that we are now sampling not one statistic but *two*, namely the lower bound and the upper bound of the confidence interval. 
+
+```{r}
+# number of times to sample
+n_rep = 5000
+
+# change sample size to 500
+n = 500
+
+# create empty MATRIX to store intervals (we need to store two numbers for each iteration of the simulation!)
+ci_samp = matrix(NA, nrow = n_rep, ncol = 2)
+
+# set alpha
+alpha = 0.05
+
+# calculate z*
+z_star = qnorm(1 - 0.5 * alpha)
+
+# start loop to sample repeatedly
+for (i in 1:n_rep) {
+    
+    # sample x1 from the population
+    samp = pop[sample(1:N, n, replace = F), x1]
+    
+    # calculate sample mean and sample standard deviation
+    m = mean(samp)
+    s = sd(samp)
+    
+    # store 95% confidence interval
+    ci_samp[i, ] = c(m - z_star * s / sqrt(n), 
+                     m + z_star * s / sqrt(n))
+    
+}
+
+# calculate population mean
+pop_mean = pop[, mean(x1)]
+
+# check whether the confidence intervals contain the population mean
+coverage = ifelse(
+    ci_samp[, 1] < pop_mean & ci_samp[, 2] > pop_mean, "Yay!", "No.."
+)
+
+# proportion of samples in which 95% CI contains parameter
+mean(as.numeric(coverage == "Yay!"))
+```
+
+This is quite close to the theoretical value of 0.95. So, the method seems to work! Also, there are two functions in this code which you will not have seen so far. 
+
+1. First, is the `ifelse(x, y, z)` function. This function is extremely useful in R coding. It first evaluates `x`, and returns `y` if `x` is `TRUE`, and `z` otherwise. The important point to remember about this function is that *it will always return an object has the same dimension as `x`*. Let us interpret what the function does in the code above. 
+    + The first argument of the `ifelse` function in the code above is `ci_samp[, 1] < pop_mean & ci_samp[, 2] > pop_mean`. `ci_samp[, 1]` returns the first column of the `ci_samp` matrix which contains the lower bounds of the sampled 95% confidence intervals. So, `ci_samp[, 1] < pop_mean` compares all these lower bounds with the population mean and returns a `vector` with the same length as `ci_samp[, 1]`. This vector will have a `TRUE` value as its `i`th element if the `i`th element of `ci_samp[, 1]` is smaller than `pop_mean` and `FALSE` otherwise.
+    + `ci_samp[, 2] > pop_mean` will compare the upper bound of the sampled confidence intervals with the population mean in the exact same fashion.
+    + Lastly `&` is the logical operator "AND" (to look for other logical operators type `?"&"` into your console.) It will compare the two vectors (which both contain only `TRUE` or `FALSE` values) element-wise. That is, if the `i`th element of the first vector is `TRUE` and the `i`th element of the second vector is also `TRUE`, it will return a `TRUE` in the `i`th element of the resulting vector. For all other combinations of `TRUE` and `FALSE`, it will return the value `FALSE`.
+    + Taken together, `ci_samp[, 1] < pop_mean & ci_samp[, 2] > pop_mean` returns a vector of the same length as the number of rows of `ci_samp`, each element of which is either `TRUE` or `FALSE`. It will be true precisely if the lower bound of the sampled confidence interval is smaller than the population mean and the upper bound is greater than the population mean. Hence, this vector will be `TRUE` when the sampled 95% confidence interval contains the population mean and zero otherwise. 
+    + Now, if the population mean is contained in the sampled confidence interval the `ifelse` function will return a `Yay!`, and otherwise a `No..`. Hence, the `coverage` vector will consists of a bunch of `Yay!` and `No..`s, the former standing for a sampled CI that contains the population mean and the latter for a CI that didn't contain it.
+
+2. The very last line of the code `mean(as.numeric(coverage == "Yay!"))` might be also a little bit confusing. If the code is nested as this one, you have to work always from the inside out: 
+    + First, `coverage == "Yay!"` is evaluated, which will return logical vector which is `TRUE` if the `i`th element of `coverage` is equal to `Yay!`.
+    + Next, we use the `as.numeric()` function to convert this vector into a numeric vector. All `TRUE`s are converted into a `1` and all `FALSE`s into a `0`. 
+    + Lastly, we take the mean of this vector (now only containing zeros and ones), which will tell us the proportions of `1`s in the vector.
+    
+
+We can also plot the confidence intervals:
+
+```{r, fig.width = 14}
+# creat a data.table where the columns are, in order, an identification number for the simulation run, the lower bound, the upper bound, and the coverage vector
+ci_df = data.table(1:n_rep, ci_samp, coverage)
+# add names to the variables of the dataset
+setnames(ci_df, c("sample_no", "lower", "upper", "coverage"))
+
+# plot the first 200 sampled CIs (use default colors)
+ggplot(ci_df[sample_no <= 200],  
+       aes(x = sample_no,
+           ymin = lower, 
+           ymax = upper, 
+           col = coverage)
+      ) +
+  geom_hline(yintercept = pop_mean) +
+  scale_color_discrete(name = "Population Mean Included?") + 
+  geom_linerange() +
+  theme_bw() +
+  labs(x = "Sample No.") + 
+  theme(legend.position = "right") +
+  ggtitle("First 200 Sampled 95% Confidence Intervals of the Mean",
+          subtitle = "Solid horizontal line is the population mean")
+```
+
+
+
+
+<br>
+
+# The Population as a Data-Generating Process (DGP)
+
+So far, we have dealt with **finite populations**. In other words, our population was a finite set of units (or individuals) that are fixed, and we sampled units from that population. Yet, in other situation, it might be very difficult to describe the population in this way. Consider the example of flipping a coin, which might be biased. We want to estimate the probability that a toss lands Heads. What is our population here? Also, when thinking about finite populations, statements such as "when the sample size grows infinitely large" sounds a little bit weird: are we saying that we will have a larger sample than the population itself? Or, have you ever wondered why the formula for the standard error of the sample mean does not depend on the population size? (Note: there *are* formulae for standard errors where population sizes appear. These are often discussed in textbooks on sampling and can make a quite large difference if the population you want to make inference about is small. But let us disregard these issues for now.)
+
+Rather than a setting where we draw a random sample from all residents of NYC and ask them about their income, suppose you ask *me* about *my* income. I would say, "well, I'm not sure. The biggest chunk comes from my fellowship and then I am RAing and also TAing, and there is also this other stuff that I'm doing...Sorry, I really am not sure." Of course, you would probe: "then tell me your best guess." Now, assume that, because I'm not sure, every time you ask me, I give a slightly different answer. 
+
+To describe my response process, we might set up the following *model*:
+
+$$Y_{i} = \theta + \epsilon_i\qquad \qquad (1)$$
+
+where $Y_i$ is the response that I give at the $i$th trial you ask me, $\theta$ is my true income which is assumed to be fixed (it has no subscripts!), and  $\epsilon_i$ is an "error term" that represents the fluctuations of my response across your trials. For example, when you ask me the first time, my response would be $Y_1 = \theta + \epsilon_1$, which is not equal to my true income $\theta$ but the slightly different quantity $\theta + \epsilon_1$; at your second trial, my answer would be $\theta + \epsilon_2$, again different from the true income, unless $\epsilon_2 = 0$.
+
+Notice that our model $Y_i = \theta + \epsilon_i$ is a description of "how the data, $Y_i$, we observe came into existence." It is, so to say, our *theory* of how the world works (although the "world" here is just me answering questions regarding my income). In fancy terms, we call such a theory or model a **data-generating process (DGP)**. 
+
+Suppose that all of you ask me *independently* (think about what this would mean in this context) about my income. As we have $15$ students in this classroom, we would get $n = 15$ responses. We might label them $Y_1, Y_2, ..., Y_n$, or $Y_{\text{Safa}}, Y_{\text{Nick}}, ..., Y_{\text{Sejin}}$, or whatever you want, the important point is that the vector $\mathbf Y = [Y_1,...,Y_n]$ is of length $15$. It is clear that this is the **sample** that we observe. The important question is rather, "What, exactly, here is our **population** to which we want to make inference about?"
+
+The population is the DGP itself. But we cannot make *just* inference about the process, similarly to the fact that we don't make inference about the population as a whole in the finite population setting. Rather, we make inference regarding some *parameters* that describe the DGP.
+
+In equation (1), one obvious parameter of interest is my true income, $\theta$. But notice that $\theta$ alone is not sufficient to describe the DGP completely. We have to *parameterize* the random fluctuations, $\epsilon_i$, as well. This requires another set of assumptions. 
+
+
+## DGP 1: I'm Telling the Truth, On Average
+
+We might start by assuming that 
+
+$$ \epsilon_i \sim \text{Normal}(0, \sigma^2)\qquad (2)$$
+
+which would correspond to a situation where I am, on average, reporting my true income, and where the fluctuations are symmetrically distributed around that true value according to the well-known bell-curve. Suppose my true income is $\$25,000$ and I report my income with standard deviation of $1,000$. If you ask me $500$ times, the data we will observe might be simulated as follows:
+```{r}
+# true income
+theta = 25000
+# standard deviation of random fluctuations
+sigma = 1000
+# number of probs
+n_ask = 500
+
+# generate random fluctuations, Normal(0, sigma^2)
+epsilon_i = rnorm(n_ask, mean = 0, sd = sigma)
+
+# generate responses according to DGP
+y_1 = theta + epsilon_i
+```
+
+If we look carefully into the two lines
+```
+# generate random fluctuations, Normal(0, sigma^2)
+epsilon_i = rnorm(n_ask, mean = 0, sd = sigma)
+
+# generate responses according to DGP
+y_1 = theta + epsilon_i
+```
+the assumptions of our model become clear. Namely, we assume that $\theta$, my true income, is *fixed* and the fluctuations in my responses, $Y_i$, stem from the randomness of $\epsilon_i$, which follows a Normal distribution with mean zero and standard deviation $\sigma$.
+
+Also, as $\theta$ is fixed, it's expected value is itself, which implies that
+
+$$\begin{aligned}
+\text{E}[Y_i] &= \text{E}[\theta + \epsilon_i] = \theta + \text{E}[\epsilon_i] \\
+&= \theta.
+\end{aligned}
+$$
+
+Indeed, under this DGP, the distribution of asking me $n = 500$ times would create a distribution that looks like the following:
+
+```{r}
+dgp1 = ggplot(data.table(Y = y_1), aes(x = Y)) + 
+    geom_histogram(
+        col = "white",
+        alpha = .6, 
+        bins = 30
+    ) + 
+    geom_vline(
+        xintercept = theta,
+        col = "purple"
+    ) + 
+    geom_vline(
+        xintercept = mean(y_1),
+        col = "blue"
+    ) + 
+    labs(y = "") + 
+    theme_bw() +
+    ggtitle(
+        paste(n_ask, "random draws from DGP in equation (1)"),
+        subtitle = paste(
+          "Vertical lines represents my true income (purple)",
+          "and my average response (blue)",
+          sep = "\n")
+    )
+
+print(dgp1)
+```
+
+
+## DGP 2: I'm Always Over-reporting
+
+But this is only one possible theory/model and, hence, not the only "population" we can think of. I might be *always* over-report my income in order to appear rich (?) in front of you. This might be represented by a model in which we assign a probability distribution on the random fluctuations that cannot be negative, e.g.,
+
+$$ \epsilon_i \sim \text{Exponential}(\lambda).\qquad (2)$$
+
+You don't need to know the details about the exponential distribution right now; the important points are that $\epsilon_i$ will be always positive, and that $\text{E}[\epsilon_i] = \lambda^{-1}$.
+
+Now we have 
+$$\begin{aligned}
+\text{E}[Y_i] &= \text{E}[\theta + \epsilon_i] = \theta + \text{E}[\epsilon_i] \\
+&= \theta  + \lambda^{-1}.
+\end{aligned}
+$$
+
+and this model would give rise to a response patter that looks like the following:
+```{r}
+# mean over-reporting rate
+inv_lambda = 1000
+
+# generate random fluctuations, Exponential(lambda)
+epsilon_i = rexp(n_ask, rate = 1 / inv_lambda)
+
+# generate responses from equation (2)
+y_3 = theta + epsilon_i
+
+# plot
+dgp2 = ggplot(data.table(Y = y_3), aes(x = Y)) + 
+    geom_histogram(
+        col = "white",
+        alpha = .6, 
+        bins = 30
+    ) + 
+    geom_vline(
+        xintercept = theta,
+        col = "purple"
+    ) + 
+    geom_vline(
+        xintercept = mean(y_3),
+        col = "blue"
+    ) + 
+    labs(y = "") + 
+    theme_bw() +
+    ggtitle(
+        paste(n_ask, "random draws from DGP in equation (2)"),
+        subtitle = paste(
+          "Vertical lines represents my true income (purple)",
+          "and my average response (blue)",
+          sep = "\n")
+    )
+
+print(dgp2)
+```
+
+We might also put these plots together in order to compare them with the `plot_grid` function from the `cowplot` package. Notice as well that I use `cowplot::plot_grid` instead of loading the whole package, since we are using only one function from the package and want to avoid name conflicts.
+
+```{r, fig.width = 10, fig.height = 4}
+cowplot::plot_grid(dgp1, dgp2, nrow = 1, align = "h")
+```
+
+It is important to reiterate the following points:
+
+1. The **sample** is again a set of random variables $\{Y_1,...,Y_n\}$ we obtain from the DGP
+1. The "population," so to say, now is not any large society or social collectivity but the response process of a single individual, namely your TA.
+2. Our two "theories" of how the data we observe came to existence are represented by the two models in equation (1) and (2), and what we are interested in are the *parameters* that govern the probabilistic process.
+3. There can be many other (or better) models of the response process, which would provide alternative DGPs (for example, I might respond differently according to the gender of the person who is asking.)
+
+Now, notice that depending on whether we assume DGP (1) or DGP (2), our *estimator* for my true income might be different. In scenario (1), I'm on average reporting my true income, so it seems plausible to use the average of my responses to estimate my true income. In scenario (2), on the other hand, the average will certainly overestimate my true income; instead, the minimum of all of my reported incomes might be the best available estimator for my true income. (As you might learn later in the course, these two estimators---the sample mean for scenario (1) and the sample minimum for scenario (2)---are in fact the Maximum Likelihood Estimators for the parameter $\theta$.)
+
+<br>
+
+# Unbiasedness and Consistency
+
+Let us first recap the definitions of unbiasedness and consistency. Let $\hat\theta_n$ be an estimator. An estimator is just *any function* of your sample, such as the mean, median, or even the sum of the first two values you observe or the cosine of the last observation. We have added the subscript $n$ to $\hat\theta_n$ to emphasize that the estimator depends on the sample size. A more precise notation would be $\hat\theta_n = f(X_1, X_2, ..., X_n)$, which shows that your estimator is just any function of your sample.
+
+>**DEFINITION (Unbiased Estimator)** An estimator $\hat\theta_n$ of the parameter $\theta$ is  **unbiased** if
+>
+> $$\text{E}\left[\hat\theta_n\right] = \theta.$$
+
+The important part about this definition is that it states nothing about $n$, the sample size. Regardless of whether you have a sample of size $n= 1$ or $n = 10,000$, your estimator is unbiased if and only if it's expected value is equal to the parameter you want to estimate. So, when we say that the sample mean is an unbiased estimator of the population mean, what we are saying is the following: Suppose I draw a single observation from the population and calculate its mean, which is just the observation itself. If I repeat this infinitely many times and look at the mean of the resulting distribution, it will be equal to the population mean.
+
+>**DEFINITION (Consistent Estimator)** An estimator $\hat\theta_n$ of the parameter $\theta$ is **consistent** if for all $\epsilon > 0$
+>
+> $$\lim_{n\rightarrow\infty}\Pr\left[\left|\hat\theta_n - \theta\right| > \epsilon\right] = 0$$
+>
+> We also say that $\hat\theta_n$ *converges in probability* to $\theta$ as $n\longrightarrow\infty$ if the equation above holds.
+
+This looks complicated but is actually not too difficult to understand. Notice that $\epsilon$ can be *any* positive real number and might be extremely small. $|\hat\theta_n - \theta|$, on the other hand, is just the distance from our estimator to the parameter we want to estimate. So, $\Pr[|\hat\theta_n - \theta| > \epsilon]$ might be interpreted as the probability that our estimator is different from the parameter we want to estimate. Hence, our estimator is consistent if and only if this probability converges to zero as our sample size increases to infinity. In other words, an estimator is consistent for a parameter if the probability of the estimator being different from the parameter converges to zero as the sample size grows large.
+
+Notice that the concept of consistency often makes not much sense when our population is finite. Suppose our population size is $N$ and we draw a sample without replacement from it of size $n$. If we increase the size of our sample continuously, there will come a point at which $n = N$. At this point, we "observe" the whole population and nothing will be random anymore. In a finite population setting, the whole *randomness* of the random sample stems from the sampling step. If we observe, on the other hand, the whole population, there is no sampling anymore and no uncertainty; the sample mean, for example, would be exactly equal to the population mean with probability one. 
+
+## Consistency of Sample Median as an Estimator for the Population Median
+
+In the simulations above, we found that the sampling distribution of the sample median is not really close to the population median. In fact, we can prove that the sample median is, in general, *biased* as an estimator for the population median. On the other hand, we can prove that the sample median is a *consistent* estimator for the population median. But since this is not a mathematical statistics course, let us try to show it via simulation. 
+
+If my claim is true, we should observe that with increasing sample size, the sample median should have a decreasing probability of being "far away" from the population median. Hence, differently from the demonstration of unbiasedness, where we repeatedly drew a sample of the *same size* and calculated our estimator, we *increase the sample size* over the simulation runs to see whether our estimator gets closer and closer to the parameter of interest.
+
+In this code, I'll show you also another way to use the `for` loop: namely, we will iterate over a vector other than `1:n_rep` and, instead, increase a counter variable to keep track of the iteration number.
+```{r fig.width = 7}
+# create a sequence of numbers, starting from 10 and ending at 30,000 which increases at steps of 10s
+samp_sizes = seq(10, 30000, 10)
+
+# create an empty vector with the length equal to the samp_sizes vector
+res = numeric(length = length(samp_sizes))
+
+# create a "counter" which will count the iteration number and set it to zero
+iter = 0
+
+# start the for loop, directly iterating over the elements of samp_sizes. Notice that the iterator is now the object "s"
+for (s in samp_sizes) {
+  
+    # increase the counter by one
+    iter = iter + 1
+    
+    # assign at the iter's place of the res vector the sample median
+    # note: the object "s" will be the sample size, which is increasing 
+    #       over iterations
+    res[iter] = pop[sample(1:N, s, replace = F), median(x1)]
+    
+}
+
+# calculate population median
+pop_med = pop[, median(x1)]
+
+# create a data.table with two columns: one for the sample size and the other for the sample median
+med_df = data.table(samp_size = samp_sizes, med = res)
+
+# create plot
+ggplot(med_df, aes(x = samp_size, y = med)) + 
+  geom_hline(yintercept = pop_med) + 
+  geom_line(col = "darkmagenta", alpha = .6) +
+  labs(x = "Sample Size", y = "Sample Median") +
+  theme_bw() +
+  ggtitle("Behavior of Sample Median as Sample Size Increases")
+```
+We see that the variation around the true parameter becomes smaller and smaller as the sample size increases. This is what we would expect of an estimator that is consistent. 
+
+A last point that is good to keep in mind. When dealing with asymptotic results, it is often important to ask also about the *rate* at which some random variable converges to either a distribution or a constant. Infinity is large and we'll never have infinite samples. So if the rate of convergence is extremely slow, sometimes sample sizes at the order of thousands might be not enought to rest assured that our estimates will be close to the population parameter. 
+
+>**EXERCISE** Return to the two examples of DGPs about my income. Consider the first model, in which I am telling, on average, the truth. By drawing increasingly large samples from the DGP, show via simulation that the average of my responses is a consistent estimator for my true income.
+>
+> 1. Start from a sample size of 10 and increase it to 100,000 in steps of 100
+> 2. Create a line-plot (as that shown above) where the y-axis is the sample size and the x-axis is the sample mean.
+> 3. Do the same with the sample median of my responses and overlay the lines of the median samples over that of the mean samples, but use different colors for the two estimators.
+> 4. What can you conclude about the behavior of these two estimators?
+
+
+

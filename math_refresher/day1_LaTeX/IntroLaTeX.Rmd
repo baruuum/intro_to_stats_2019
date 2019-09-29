@@ -1,0 +1,377 @@
+---
+title: "Getting Started with LaTeX"
+author: "Barum Park"
+date: "8/28/2019"
+output: 
+    html_document:
+        keep_md: false
+        matjax: default
+        theme: yeti
+        highlight: textmate
+        toc: true
+        number_sections: false
+---
+    
+<style type="text/css">
+
+body{ 
+
+    font-size: 16px;
+    line-height: 1.7em;
+    <!-- text-align: justify; -->
+
+}
+
+h1 { font-size: 30px; }
+
+h2 { font-size: 24px; }
+
+h3 { font-size: 20px; }
+
+.nobullet li {
+  list-style-type: none;
+}
+
+</style>
+
+<br>
+
+# Introduction
+
+<br>
+
+LaTeX is a document preparation system which is **free** (yay!) and extremely flexible. It is not a word processor but rather a formatter: you write some text, formatted with a set of commands, which is then compiled into a document once you are finished. Here "finished" should be interpreted loosely as "any time you want"; the difference of writing a LaTeX document and using, say, Microsoft Word is that you won't see immediately how your document looks like while you are writing, since you have to compile the document to incorporate any new changes. Some people like this feature of LaTeX, as it may help you to concentrate on the text; others don't, as you may want to see the appearance of the final document as you are writing.
+
+I usually use a program called TeXstudio (which is also free, yay!) to create my documents. However, there are many other programs or online-platforms that you might use. Overleaf, for example, is a great online editor with which you can format LaTeX documents and you'll get an account for free (yay!) when you use your NYU e-mail address. It is also very convenient if you are co-authoring with others as you can edit the same document simultaneously with your collaborators (Siwei and me used this platform for the last paper we've been writing together). The only shortcoming is that you need to have internet access to use it.
+
+<br> 
+
+# Getting Started
+
+<br>
+
+## The Preamble
+
+Regardless of which editor you choose, here is how you get started. All LaTeX documents start with a **preamble** where you specify the document-class, various aspects of the document, e.g., the margins size, load packages that you want to use, and other stuff that will affect the whole document structure. 
+
+Most of the time, you'll use the `article` document class, which is designed for shorter documents. A typical preamble looks like the following:
+
+```latex
+\documentclass[12pt]{article}
+\usepackage[a4paper, margin = 1in]{geometry}
+\usepackage{amsmath, amssymb, graphicx, setspace}
+```
+
+- The arguments in the square brackets (`[]`) are optional arguments which we pass when loading a package or setting the document class. So, the `documentclass[12pt]{article}` tells the program that we want an `article`-type document and that we want the default font size of the document to be `12pt`. 
+- The `geometry` package can be used to specify the size and margins of the document. Here we tell the program that we want the paper size to be A4 with one-inch margins. There are a lot of other options with which you can fine-tune your document. Just search `latex geometry` in Google and you'll find abundant resources.
+- The third line shows that you can also load several packages simultaneously. You want to do this if you don't have to specify any additional options when loading the packages (you can specify them also later). The `amsmath` and `amssymb` are widely used packages for math formatting; the `graphicx` package is used to include figures into your document; and the `setspace` package makes it easy to set the line spacing in your document, by using commands like `\doublespacing` or `\onehalfspacing`.
+
+There are a lot of packages which you can use when creating a document. The best way to find the packages you need is simply to google what you want, e.g., `latex table formatting` or `draw geometric shapes in latex`, and so on.
+
+<br>
+
+## Starting the Document
+
+Using the preamble, we might create a short document as follows:
+
+```latex
+\documentclass[12pt]{article}
+\usepackage[a4paper, margin = 1in]{geometry}
+\usepackage{amsmath, amssymb, graphicx, setspace}
+
+
+\doublespacing
+
+\begin{document}
+
+
+Why would you ever study sociology?
+
+
+\end{document}
+```
+
+- Everything that appears before `\begin{document}` is included in the preamble and affects the whole document. For example, by using the `\doublespacing` command from the `setspace` package, the whole document will be double-spaced (**Caution:** the definition of double-spacing is different in LaTeX and in Microsoft Word. See, for example,  [here](https://tex.stackexchange.com/questions/13742/what-does-double-spacing-mean).) By the way, we could have also used the `[doublespacing]` option, when loading the `setspace` package.
+- Everything that you type after `\end{document}`, on the other hand, will be ignored and has no effect whatsoever.
+
+<br>
+
+## Adding a Title to Your Document
+
+Next, let us add to the preamble a title, an author name, and a date (this is specific for the `article` document class, other document classes let you specify other things).
+
+```latex
+\documentclass[12pt]{article}
+\usepackage[a4paper, margin = 1in]{geometry}
+\usepackage{amsmath, amssymb, graphicx, setspace}
+
+
+\title{My First LaTeX Document}
+\author{Baruuum}
+\date{\today}
+
+
+\begin{document}
+
+
+Why would you ever study sociology?
+
+
+\end{document}
+```
+
+- The `\title`, `\author`, and `\date` command adds information about the title, author, and date (obviously)
+- `\today` will insert in its place today's date.
+- Yet, when you compile the document, you'll probably see only "Why would you ever study sociology?" without any title or author information. The reason is that we have to tell the program explicitly that we want to include `\title`, `author`, and `date`, which is part of the preamble (i.e., *not* between `\begin{document}` and `\end{document}`) 
+- Creating the title is easy by using `\maketitle` as shown below
+
+```latex
+\documentclass[12pt]{article}
+\usepackage[a4paper, margin = 1in]{geometry}
+\usepackage{amsmath, amssymb, graphicx, setspace}
+
+
+\title{My First LaTeX Document}
+\author{Baruuum}
+\date{\today}
+
+
+\begin{document}
+
+% generate title
+\maketitle
+
+
+Why would you ever study sociology?
+
+
+\end{document}
+```
+- You'll see that the compiled document has now the information that we want.
+- Also, I've added a **comment** before the `\maketitle` command. In LaTeX, everything that follows `%` will be regarded as a comment and will not appear in the generated document. This is often convenient when writing papers, as you can just "comment out," rather than delete phrases while editing your text. 
+- It is also convenient when collaborating with others on the same paper. You can add something like:
+```latex
+%[2019/12/24] deleted the following sentence due to annoying reviewer #2. We should add it back once the paper get accepted. The original sentence reads : "Why would you ever study sociology?"
+```
+
+<br>
+
+## Tables and Lists
+
+Often times you'll need itemized lists of things. You can use the `itemize` environment (for unordered lists) or the `enumerate` environment (for ordered lists) for this purpose. Below is a simple example:
+
+```latex
+Why would you ever study sociology?
+
+\begin{itemize}
+    \item I have no idea
+    \item Do you?
+\end{itemize}
+
+Why would you ever study mathematics?
+
+\begin{enumerate}
+    \item What is mathematics?
+    \item Mathe...what??
+\end{enumerate}
+```
+
+
+Of course, every line of this should  be placed between `\begin{document}` and `\end{document}` and the preamble should be included.
+
+
+
+Tables can be created by using the `tabular` environment:
+
+```latex
+Table \ref{tab: freg} shows some fancy regression results. Nothing is significantly different from zero.
+
+\begin{table}[h]
+
+    \centering
+    
+    \caption{Fancy Regression Results}
+    
+    \begin{tabular}{lcr} \hline \hline
+        coef. & s.e. & p \\ \hline
+        Why & would & you \\
+        ever & study & sociology? \\ \hline
+    \end{tabular}
+    
+    \label{tab: freg}
+    
+\end{table}
+```
+
+- The `[h]` after `\begin{table}` tells the program that you want the table to be placed `h`ere. You can also specify `t`op, `b`ottom, or separate `p`age; or even multiple options together, e.g., `[htbp]`.
+- `\centering` (obviously) tells the program to center what follows (and applies only until the current environment, i.e., `table`, ends).
+- the `\caption{...}` puts a caption at the place it is located
+- Right after `\begin{tabular}` we added `{lcc}`. This tells the program that we want three columns, where the first column is `l`eft-aligned, the second `c`entered, and the last one `r`ight-aligned.
+- The `\hline` command just draws a horizontal line. So, `\hline \hline` will give us a double line.
+- The `\label` command labels the table so you can refer to it in the text (without using Table 1, 2, and so on). You just write Table `\ref{table-label}`. The label of a table does not have to start with a `tab:`. I do this just to distinguish between labels of figures, tables, and sections.
+- Notice also that the text is indented for each new environment. This is not necessary and only done to make the text more readable.
+
+<br>
+
+## Inserting Figures
+
+Suppose you have a file called `mmsbm.pdf` in the same folder as your `*.tex` file and you want to include it somewhere into your document. You can use the following:
+
+```latex
+\begin{figure}[h]
+
+    \centering
+    \caption{Some Fancy-looking Network}
+    \includegraphics[width=.7\textwidth]{mmsbm.pdf}
+    \label{fig: mmsbm}
+    
+\end{figure}
+```
+
+- By now, I hope that you'll be able to tell what this code is doing. The only new thing here is `\includegraphics`, which is a command to include graphics(!). `[width=width-of-graphic]` specifies the width of the figure, where `\textwidth` is the width of the page (minus the margins); `{file-name}` specifies the name of the file that contains the figure
+
+<br>
+
+## Equations
+
+LaTeX is great for formatting equations. Here are some examples:
+
+- If you write `$E[X] = \int x f(x) dx$` in your text, you'll get an **inline equation**, looking like: $E[X] = \int_{-\infty}^\infty x f_{X}(x) dx$.
+- In other contexts, you want your equations not to be squeezed into the text, but rather to be placed into a separate line. In these situations you create **display style equations** by using either `$$ some formula $$`, `\[ some formula \]`, or `\begin{equation} some formula \end{equation}`. These equations will look like the following:
+```latex
+$$F_X(u) = \int_{-\infty}^{u} \frac{1}{ \sqrt{ 2\pi } } e^{-\frac{x^2}{2}} dx$$
+```
+<div class = "nobullet" >
+- which results in
+</div>
+
+$$F_X(u) = \int_{-\infty}^{u} \frac{1}{ \sqrt{ 2\pi } } e^{-\frac{x^2}{2}} dx$$
+
+<div class = "nobullet" >
+- here `\int_{a}^{b}` is the command to insert an integral sign with limits $a$ to $b$, `\infty` stands for the infinity sign, `a_x` denotes that `x` is should be a subscript of `a`, `a^x` denotes that `x` should be a superscript of `a`, `\frac{a}{b}` displays a fraction with `a` being the numerator and `b` the denominator, `\pi` is the Greek letter $\pi$, and the curly brackets `{...}` are used to group things together. 
+</div>
+- Also, sometimes your equation will span multiple lines. In these cases you can use the `\begin{align} ... \end{align}` environment. For example, if you write
+```latex
+\begin{align}
+E[\hat{\beta}] &= E[(X'X)^{-1}X'y] \\
+  &= (X'X)^{-1}X'E[X\beta + \epsilon] \\
+  &= (X'X)^{-1}X'X\beta + E[\epsilon] \\
+  &= \beta.
+\end{align}
+```
+<div class = "nobullet" >
+- you'll get the following result:
+</div>
+
+$$
+\begin{align}
+E[\hat{\beta]} &= E[(X'X)^{-1}X'y] \\
+&= (X'X)^{-1}X'E[X\beta + \epsilon] \\
+&= (X'X)^{-1}X'X\beta + E[\epsilon] \\
+&= \beta.
+\end{align}
+$$
+
+<div class = "nobullet" >
+- Notice that we used `\beta` and `\epsilon` to insert Greek letters into the equation. Further, `\\`, in general, stands for a line-break (i.e., changing to the next line) although its precise meaning is context-dependent.
+- We used `&` to align the the equations: for every line, all `&` will be placed at the exact same horizontal position (although the symbol `&` itself will be invisible).
+</div>
+- In the case you are annoyed by the numbering of the equations, you can add a `*` to the environment name, e.g, `\begin{equation*} ... \end{equation*}` or `\begin{align*} ... \end{align*}`. Also the `$$ ... $$` and `\[ ... \]` environments, by default, don't add any equation numbers.
+- There are a lot of other things you'll have to figure out by yourself (e.g., how to write something like $\mathcal{G}$ or $\prod_{i=1}^n$?). Fortunately, LaTeX is so widely used that by googling it, you'll find an answer immediately. 
+
+<br>
+
+# Putting It All Together
+
+<br>
+
+I think with this you'll be able to start using LaTeX. Of course, there is a lot to learn and, as with other things, Google will be your best friend. 
+
+Below, I put everything together into one document. I've also added some `sections` and `subsections` to the document. The compiled pdf file can be found in my [github repository](https://github.com/baruuum/intro_to_stats_2019/tree/master/math_refresher/day1_Latex).
+
+```latex
+\documentclass[12pt]{article}
+\usepackage[a4paper, margin = 1in]{geometry}
+\usepackage{amsmath, amssymb, graphicx, setspace}
+
+
+\title{My First LaTeX Document}
+\author{Baruuum}
+\date{\today}
+
+% double-space whole document 
+% (you have to load the setspace package to use this)
+\doublespacing
+
+\begin{document}
+
+\section{Sociology?}
+
+Why would you ever study sociology?
+
+\begin{itemize}
+    \item I have no idea
+    \item Do you?
+\end{itemize}
+
+Why would you ever study mathematics?
+
+\begin{enumerate}
+    \item What is mathematics?
+    \item Mathe...what??
+\end{enumerate}
+
+\subsection{Tables and Figures}
+
+Table \ref{tab: freg} shows some fancy regression results. Nothing is significantly different from zero.
+
+\begin{table}[h]
+
+    \centering
+    
+    \caption{Fancy Regression Results}
+    
+    \begin{tabular}{lcr} \hline \hline
+        coef. & s.e. & p \\ \hline
+        Why & would & you \\
+        ever & study & sociology? \\ \hline
+    \end{tabular}
+    
+    \label{tab: freg}
+    
+\end{table}
+
+Did you know that many network plots, such as Figure \ref{fig: sbm}, can be quite misleading?
+
+\begin{figure}[h]
+    \centering
+    \caption{Some Fancy-looking Network}
+    \includegraphics[width=.7\textwidth]{mmsbm.pdf}
+    \label{fig: sbm}
+\end{figure}
+
+\section{Conclusion}
+
+The expected value of a continuous random variable $X$ is $E[X] = \int_{-\infty}^\infty x f_{X}(x) dx$, given that it admits a density function $f_X$. Suppose $X$ has a standard normal distribution. Then it's density function is given as
+
+\begin{equation}
+f_X(x; \mu, \sigma^2) = \frac{1}{ \sqrt{ 2\pi \sigma^2 } } e^{-\frac{1}{2\sigma^2}(x-\mu)^2}.
+\end{equation}
+
+If $E[\epsilon] = 0$, the expected value of the OLS estimator can be derived as
+
+\begin{align*}
+E[\hat\beta] &= E[(X'X)X'y] \\
+    &= (X'X)X'E[X\beta + \epsilon] \\
+    &= (X'X)X'X\beta + E[\epsilon] \\
+    &= \beta.
+\end{align*}
+
+Hence, it is unbiased.
+
+\begin{center}
+\Large Good luck with \LaTeX!
+\end{center}
+
+\end{document}
+```

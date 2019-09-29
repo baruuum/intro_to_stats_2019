@@ -1,0 +1,346 @@
+---
+title: "Very Short Introduction to Rmarkdown"
+author: "Barum Park"
+date: 
+output: 
+    html_document:
+        keep_md: false
+        matjax: default
+        theme: yeti
+        highlight: textmate
+        toc: true
+        number_sections: false
+---
+    
+<style type="text/css">
+
+body{ 
+
+    font-size: 16px;
+    line-height: 1.7em;
+    <!-- text-align: justify; -->
+
+}
+
+h1 { font-size: 32px; }
+
+h2 { font-size: 24px; }
+
+h3 { font-size: 20px; }
+
+.nobullet li {
+  list-style-type: none;
+}
+
+</style>
+
+<br>
+
+# Introduction
+
+Throughout this course, you'll use R for data analysis. While we'll cover how to use R in a separate section, here I want to draw your attention to Rmarkdown. Similarly to LaTeX, Rmarkdown is a program to create documents. Rmarkdown makes it extremely easy to incorporate your code as well as the results of running those codes directly into your document. Also, you can create a variety of document-types using Rmarkdown, such as MS-word files, pdfs, html files, or even presentation slides. It might provide you with the easiest way to report the results of your analysis throughout this course (say, for your assignments). Even this webpage you are looking at right now is created by Rmarkdown.
+
+As the name suggests, Rmarkdown uses the `markdown` language to format your document. Markdown, on the other hand, is an extremely popular text formatting syntax which is used on various platforms such as `github` or `stackexchange`. Indeed, it seems to me that knowing `markdown` is becoming slowly, but certainly, a prerequisite to interact efficiently with other disciplines, especially those that use quantitative methods.
+
+The markdown syntax is simple and easy to learn. This has its pro and cons: because it is simple, you don't need to invest much time to learn it. The downside of this is that the language is not very flexible. So, to fine-tune (but only to fine-tune!) your documents, you have to use 
+
+1. html/css tags, in the case you are creating html documents
+   + For example, to add an extra line-breaks, you can add `<br>`. In fact, the very document that you have before your eyes starts with a `<style type="text/css"> ... </style>` tag. 
+   + We will not go into the details into fine-tuning html documents here.
+2. In the caseor on LaTeX commands, in the case you are creating a pdf
+   + At the end of this short introduction, I'll explain a little bit how to do so.
+
+
+<br>
+
+# The YAML Header
+
+Similarly to LaTeX, where we start a document with a preamble, a markdown file starts with a **YAML header**. A simplified version of the header for this webpage looks like the following:
+
+```Rmarkdown
+---
+title: "Very Short Introduction to Rmarkdown"
+author: "Barum Park"
+date: 
+output: 
+    html_document:
+         theme: yeti
+         highlight: textmate
+         toc: true
+---
+```
+
+- So, the header starts with `---` after which we specify some options for our document, such as the title or the author name; the header ends with `---` as well.
+- Again, the indention is there just to make the code readable. The line breaks are, however, part of the code. For example, 
+    + `output: html_document: theme: yeti` won't run
+    + but
+``` Rmarkdown
+    output:
+    html_document:
+    theme: yeti
+```
+<div class = "nobullet" >
+    + will run without problems.
+</div>
+    + the exception is the case in which we don't specify any optional arguments after `html_document`; that is, if we use `output: html_document` in one line, the document will be generated without problems.
+- What follows the `html_docuemnt:` argument are optional arguments. Just typing `output: html_document`, for example, will generate a html document with the default settings.
+    + here, we have specified that we want the yeti theme applied to our document
+    + that the textmate theme should be used for syntax-highlighting
+    + and that we want a table of contents (`toc`)
+- There are a lot of other options that you can specify in the YAML header, which, however, *depend on the type of document you are creating*. In the last part of this introduction, for example, we will explore a little bit how to incorporate LaTeX commands into your Rmarkdown file when creating pdf documents. 
+
+
+<br>
+
+# Text, Equations, and R Code/Results
+
+## Text Formatting
+
+I'll leave it to you in figuring out how to use Rmarkdown to format text. It's really easy, believe me. Most of the information you'll need can be found in this [cheatsheet](https://www.rstudio.com/wp-content/uploads/2015/02/rmarkdown-cheatsheet.pdf) or in [this one](https://www.rstudio.com/wp-content/uploads/2016/03/rmarkdown-cheatsheet-2.0.pdf). If you want to get deep into all the details of Rmarkdown, see [here](https://bookdown.org/yihui/rmarkdown/pdf-document.html). In addition, I've uploaded the Rmarkdown files that were used to create the documents for this math refresher available at my [github account](https://github.com/baruuum/intro_to_stats_2019/tree/master/math_refresher) in the case you need some concrete examples. 
+
+Here I'll just point to one important command that is not pointed out in the [cheatsheet](https://www.rstudio.com/wp-content/uploads/2015/02/rmarkdown-cheatsheet.pdf). Namely, if you want to "comment out" some parts of your Rmarkdown document, you will need to enclose the lines you want to commnt out with `<!-- text to be commented out -->`. That is, if you would write into your document
+```
+<!-- Welcome to NYU Sociology! -->
+```
+people would not know that they are welcomed. 
+
+That different programs use different symbols for comments can be confusing. Recall that
+
+1. In R, everything following an `#` will be commented out
+2. In LaTex, everything following an `&` will be commented out
+3. In Rmarkdown/markdown, everything enclosed in `<!--` and `-->` will be commented out.
+
+The problem is that you'll sometimes switch between LaTeX, R, and markdown environments *within* the same Rmarkdown document. Although this sounds really confusing, it is often obvious by the context in which envorinment you are operating. I'll give you an example to make this clear at the end of this short lecture. 
+
+
+## Equations 
+
+Equations are also easy to add if you know how to use LaTeX. Simply enclose your equations in `$` for inline equations and in `$$` for display-style equations, and a nice formula should appear in your document. For example, if you write
+```
+$$ p(\theta \, | \,  \mathbf y) \propto p(\mathbf y \, | \, \theta) p(\theta)  $$
+```
+you will get
+$$ p(\theta \, | \,  \mathbf y) \propto p(\mathbf y \, | \, \theta) p(\theta) . $$ 
+There is one point, though, that is a little bit different. When creating html documents, the equations are generated by `MathJax`, which is a display machine based on JavaScript. While quite everything is the same as in LateX, you will not be able to use the `align` environment, which we have used two days ago to generate multi-line equations. Instead, you have to use the `aligned` environment (when generating a pdf-document, using the `align` environment should be fine as long as you don't enclose `\begin{align} ... \end{align}` with `$$`, since documents are rendered using `pandoc`). 
+
+Below is an example:
+```
+$$
+\begin{aligned}
+p(\theta \, | \,  \mathbf y) &\propto  p(\mathbf y \, | \, \theta)\times  p(\theta)\\
+&=\text{Likelihood} \times \text{Prior}
+\end{aligned}
+$$
+```
+will give you
+$$
+\begin{aligned}
+p(\theta \, | \,  \mathbf y) &\propto  p(\mathbf y \, | \, \theta)\times p(\theta) \\
+&=\text{Likelihood} \times \text{Prior}.
+\end{aligned}
+$$
+
+## R-code and Results
+
+In this short document, I'll focus on inserting R code and results into your document with Rmarkdown. Again, this is really straightforward with Rmarkdown. You simply use triple backticks to embed your code and any results. For example, you might write the following into your Rmarkdown file:
+
+<pre><code> ```{r eval = T}
+set.seed(1234)  
+n = 500         
+x = rnorm(n)    
+hist(x)         
+``` </code></pre> 
+
+- We'll learn how to code in R throughout this semester, but to give a short explanation of the code (line by line):
+  1. `set.seed(1234)` sets a the **seed** for the pseudo-random number generator. This ensures that whenever we run the same simulation code we get exactly the same results (although the default settings might be different for different operating systems or R versions; for details, see [here](https://stat.ethz.ch/R-manual/R-devel/library/base/html/Random.html)).
+  2. We assign to the object `n` the number `500`
+  3. We simulate `n` (i.e., `500`) observations from the standard normal distribution using the `rnorm` function.
+  4. We plot a histogram of the object `x`, which contains the simulated normal variates.
+  
+Entering this code to Rmarkdown and **knitting** it (which is the equivalent to compiling a LaTeX document) into a document will give you the following result. Knitting can be done by pushing on the small "knit" button on the top-left of Rstudio, or by using the shortcut `Ctrl/Cmd + Shift + K`. (For all shortcuts available in Rstudio hit `Alt/Option + Shift + K`.)
+
+----
+
+**RMARKDOWN OUTPUT**
+
+``` {r, eval=T}
+set.seed(1234)  
+n = 500         
+x = rnorm(n)    
+hist(x)         
+```
+
+---
+
+If you knit the document, you'll see that Rmarkdown first **echoes** the code you've entered and, thereafter, displays the result. There are plenty of options you might specify. For example, if you think, as I do, that the figure is too large, you can control the dimensions and th ealignment of the figure using the `fig.width`, `fig.height`, and `fig.align` options:
+
+<pre><code> ```{r eval = T, fig.width = 6, fig.height = 4, fig.align = "center"}
+set.seed(1234)  
+n = 500         
+x = rnorm(n)    
+hist(x)         
+``` </code></pre> 
+ will give you the following output:
+
+----
+
+**RMARKDOWN OUTPUT**
+
+```{r eval = T, fig.width = 5, fig.height = 4, fig.align = "center"}
+set.seed(1234)  
+n = 500         
+x = rnorm(n)    
+hist(x)         
+```
+
+---
+
+2. On the other hand, if you set `eval` to false:
+
+<pre><code> ```{r, eval = F}
+set.seed(1234)  
+n = 500         
+x = rnorm(n)    
+hist(x)         
+``` </code></pre> 
+
+<div class = "nobullet" >
+- this will *not* execute the R code and only *show* the code in your compiled Rmarkdown document. 
+</div>
+
+2. If you drop the `eval = T/F` argument altogether and put after the triple-backticks only `{r}`, Rmarkdown will both show the code and the results (i.e., `eval = T` is the default).
+
+3. If you want to show only the results, without the code, you can set the `echo` option to `FALSE` (which is by default set to `TRUE`)
+
+<pre><code>```{r, eval = T, echo = F}
+set.seed(1234)
+n = 500
+x = rnorm(n)
+hist(x)
+```</code></pre>
+
+4. The R results that you can include into your document are not confined to plots or figures. For example, the R command `summary` displays the minimum, 1st quartile, median, mean, 3rd quartile, and the maximum of a variable. Including `summary(x)` into your Rmarkdown file as follows:
+
+<pre><code>```{r, eval = T}
+set.seed(1234)  
+n = 500         
+x = rnorm(n)
+summary(x)
+```</code></pre>
+<div class = "nobullet" >
+- will generate the following output in your compiled document:
+</div>
+
+----
+
+**RMARKDOWN OUTPUT**
+
+```{r, eval = T}
+set.seed(1234)  
+n = 500         
+x = rnorm(n)
+summary(x)
+```
+
+----
+
+# Incorporating LaTeX Commands
+
+- If you are creating a pdf-document and you want to use commands that are included in LaTeX packages, you have to add the appropriate options into your YAML header. 
+- Notice that the following will **not** work if you are creating a `html_document`
+- There are a few options you can specify directly into the header, such as options for the `geometry` package, the `documentclass`, and the `fontsize` (for other options, see [here](https://bookdown.org/yihui/rmarkdown/pdf-document.html)). For example, 
+```
+---
+title: "Very Short Introduction to Rmarkdown"
+author: "Barum Park"
+date: 
+output: pdf_document
+documentclass: article
+fontsize: 12pt
+geometry: margin = 1in
+---
+```
+
+<div class = "nobullet">
+- will create an `article` class document with font size set to `12pt` and with one-inch margins
+</div>
+- When creating pdf-documents, incorporating basic LaTeX into your Rmarkdown document is straightforward. For example, you might just type anywhere in your document the following
+
+```latex
+\begin{table}[h]
+\centering
+    \begin{tabular}{lccc} \hline \hline
+        some & random & text & for \\
+        a & table & example & ! \\ \hline 
+    \end{tabular}
+\end{table}
+``` 
+<div class = "nobullet">
+- and the table will appear in the place of the code
+</div>
+
+- In the case you want to add commands from the packages you use in LaTeX, you have to add the `header-includes` option into your YAML header. For example, by adding
+
+```
+---
+title: "Very Short Introduction to Rmarkdown"
+author: "Barum Park"
+date: 
+output: pdf_document
+documentclass: article
+fontsize: 12pt
+geometry: margin=1in
+header-includes:
+   - \usepackage{setspace}
+   - \usepackage{mathptmx}
+---
+```
+<div class = "nobullet" >
+- you'll be able to use the commands included in the packages that are listed after `header-includes:`
+</div>
+
+```
+---
+title: "Very Short Introduction to Rmarkdown"
+author: "Barum Park"
+date: 
+output: pdf_document
+documentclass: article
+fontsize: 12pt
+geometry: margin=1in
+header-includes:
+   - \usepackage{setspace}
+   - \usepackage{mathptmx}
+---
+
+<!-- we can now use LaTeX commands included in the setspace and mathptmx packages!  -->
+
+<!-- this is a command from the setspace package -->
+\doublespacing
+
+<!-- Here `#` stands for a section header, not(!) for commenting out stuff -->
+<!-- `#` is used for comments in R not markdown -->
+# Introduction
+
+Now this document will be double-spaced! Yay! The mathptmx package will render this document in a Times New Roman type font! Yay!
+
+This line is here just to check whether the document is indeed double-spaced!
+
+<!-- We can also use LaTex tables -->
+<!-- Note that to comment out a line "within" the table, you have to use `%`, i.e., the LaTeX command for comments, since you are in a LaTeX environment -->
+
+\begin{table}[h]
+\centering
+    \begin{tabular}{lccc} \hline \hline
+    %   some & random & text & for \\
+        a & table & example & ! \\ \hline 
+    \end{tabular}
+\end{table}
+```
+
+With this you are ready to use LaTeX within your Rmarkdown document!
+
+# Congrats!
+
+So, with this you're done with the math camp. Congrats! As with R and LaTex, there is *a lot* you can do with Rmarkdown and google will be your best friend! I hope this will get you started.
+

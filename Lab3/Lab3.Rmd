@@ -1,0 +1,814 @@
+---
+title: "Lab3 - t and chi-squared tests"
+author: "Barum Park"
+date: "9/20/2019"
+output: 
+    html_document:
+        keep_md: false
+        matjax: default
+        theme: yeti
+        highlight: textmate
+        toc: true
+---
+
+<style type="text/css">
+
+body{ 
+
+    font-size: 16px;
+    line-height: 1.7em;
+
+}
+
+blockquote {
+    padding: 10px 20px;
+    margin: 0 0 20px;
+    font-size: 16px;
+    border: solid 1px;
+}
+
+h1 { font-size: 32px; }
+
+h2 { font-size: 24px; }
+
+h3 { font-size: 20px; }
+
+.nobullet li {
+  list-style-type: none;
+}
+
+</style>
+
+<br>
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, 
+                      cache = TRUE,
+                      fig.align = "center",
+                      fig.width = 5,
+                      fig.height = 4,
+                      letina = TRUE)
+```
+
+This lab will be, I hope, very short, since we'll discuss some of the materials of the last lab and also the solutions to your first assignments. I'll go a little bit more into the details of testing hypotheses regarding a population mean compared to the other materials. This is not because it is the most important case, but rather because it is the simplest case (and I believe we have already covered all the necessary materials).
+
+By the way, I you all did very well on the assignment :)
+
+<br> 
+
+# Downloading data
+
+This will be the first lab in which we use real-world, rather than simulated, data. For your repliation project, you'll use the American Community Survey (ACS). In this lab, however, we'll use the General Social Survey (GSS).
+
+1. To download the GSS, we go to the [GSS website](https://gss.norc.org/) and click on "Get the Data". 
+2. Unforunately, the GSS provides the data only in STATA or SPSS format. Let us choose the STATA-format (so click on "STATA"). 
+3. In the "Download Individual Year Data Sets" section, click on "2018". 
+4. A window will open, which asks you where to save the data. Create a `raw_data` directory in your `Labs` directory, and save your data there.
+5. Open the downloaded `.zip` file and extract the `.dta` file that is contained there.
+
+Every (reasonable) institution that collects quantitative data will create also a **codebook** when the data are released. The codebook contains information about how variables are coded. For example, the variable `gender` might be coded using a `0` for the category `male` and a `1` for `female`. This mapping from the numbers `(0,1)` to `(male, female)` is entirely arbitrary (e.g., we could have also used the number `10` for male and `100` for female), so we need some information about how to interpret the numbers in the dataset. This is what the codebook does.
+
+To obtain the codebook for the General Social Survey,
+
+1. click on the "Get Documentation" tab
+2. Then click on "Entire GSS Cross-Section Codebook"
+
+This codebook will be quite large, but we will have to work through it.
+
+<br>
+
+# Raw Data
+
+Now, here is an **important rule** when working with datasets:
+
+> **RULE** Never change the raw-data. NEVER.
+
+You might ask: "but then, how do I save my work?" If you write your code in a script (as we do here), you can just save the script. Running the script will bring you exactly to the point in your analysis where you are right now, given that **you have not changed the raw-data**. If you did something wrong in your script, you can change your script to get the right results. If you have changed the raw-data, on the other hand, there might be no way to go back to your original dataset from which you started (unless the manipulations you did on the raw data can be reverse-engineered.)
+
+Of course, running your whole script every time can become a  time-consuming task, expecially if your script gets too long or when the dataset itself is very large. In these circumstances, you want to save your modified data under **a different name** and preferably in a different directory. Anyways, the important point is that you should **never overwrite your original dataset**.
+
+Here is what I usually do for any data analysis:
+
+> **Style Suggestion** For every project of yours, create a directory `raw_data` (the name itself is not important) to store your original dataset. Create a separte directory `data` (again, the name is unimportant) to store dataset that result from your analysis.
+
+Let us try this out with the GSS data. The first thing we need to do is create an R script, so let us write one. Open a new R script and save it into a new directory named `Lab3` within your `Labs` directory. The file should have the following content (I believe, by now, you know how to do this)
+
+```{r}
+#### Title  : Lab 3
+#### Author : Baruuum
+#### Date   : Today :)
+```
+
+Next, we install the `readstata13` package, which let's us read `.dta` file-formats, and the `gmodels` package, which makes creating cross-tabulations easier for us.
+```{r, eval = F}
+# install package to load STATA data
+install.packages("readstata13")
+install.packages("gmodels")
+```
+
+Thereafter, we load the packages we are going to use throughout this lab
+```{r, message = FALSE}
+# attach libraries to use
+library("here")
+library("data.table")
+library("ggplot2")
+library("gmodels")
+```
+
+Notice that we *have not* attached the `readstat13` package. We will need only a single function from this package, so it is better to call it through the `::` operator.
+
+Next, we load the GSS dataset (saved in the `working_directory/raw_data` directory) into R:
+```{r}
+# load GSS dataset
+gss2018 = readstata13::read.dta13(
+    here("raw_data", "GSS2018.dta"),
+    convert.factors = FALSE)
+```
+
+This will create a `data.frame` (not `data.table`) object named `gss2018`. We can check the class of this object by running:
+```{r}
+class(gss2018)
+```
+
+For this lab, we will use three variables: `educ`, `sex`, and `vote16`. So, let us extract them:
+```{r}
+# transform data.frame into a data.table
+gss = data.table(gss2018)
+
+# create vector of variables to keep
+var_keep = c("educ", "sex", "vote16")
+
+# keep only these three variables
+gss_short = gss[, ..var_keep]
+```
+Notice the two dots (`..`) in front of the vector `var_keep`. These are necessary if you want to extract columns by their names using a `character` vector. 
+
+<br>
+
+# Creating Directories from R and Saving Your Data
+
+Now, this is the dataset we will work with throughout this lab. Suppose that at this point we want to save the data. To reiterate, **do not overwrite the raw data**. Instead, what we are going to do is to save our data in a different file. Suppose we want to create a `data` directory *within* the `Lab3` directory (we might want to do this because this dataset will be only used for the current lab.)
+
+The first thing we have to do is to create the subdirectory `data` within our `Lab3` directory. We have done this manually so far. But, it turns out, you can use R for this purpose!
+```{r}
+# check whether a "data" directory exist within the "Lab3" directory
+if (!dir.exists(here("Lab3", "data"))) {
+
+  # if not, create a subdirectory "data"
+  dir.create(here("Lab3", "data"))
+  
+}
+```
+To explain what I'm doing here: first, `here("Lab3", "data")` will create a path to `working_directory/Lab3/data`. This is just a character string. `dir.exists` checks whether this path exists, and returns `TRUE` if it does and `FALSE` otherwise. Yet, we have put an exclamation mark (`!`) in front of `dir.exists`, which stands for "NOT" and negates the result of the subsequent object. Hence, if R can find the directory specified in `here("Lab3", "data")`, it will return a `FALSE` and it will return a `TRUE` if the directory *does not* exist.
+
+As you recall, the `if (condition) { ...code...}` statement will run `...code...` if `condition` evaulates as `TRUE`; otherwise, it will skip everything that is within `{` and `}`. In our code above, the `condition` will evaluate to `TRUE` only if the directory we want to create does not already exist. In this case, we create the directory using the `dir.create` function. You can check whether indeed a directory "data" has be created in your "Lab3" directory.
+
+Lastly, we save our three-column dataset into the "data" subdirectory using the `fwrite` function:
+
+```{r}
+# save data in comma-separated format
+fwrite(gss_short, here("Lab3", "data", "gss2018_short.csv"))
+```
+
+After this, we can load this dataset whenever we want by using the `fread` function as usual:
+```{r}
+gss_short = fread(here("Lab3", "data", "gss2018_short.csv"))
+```
+
+<br>
+
+# Missing Values, Recoding Variables
+
+Most datasets will have missing values. For example, some questions might not apply to certain respondents (e.g., questions regarding spouses for unmarried respondents) or respondents of a survey might refuse to answer certain questions. These cases are often included in the dataset as **missing values**. While missing values can be the main focus of a study, most of the time we won't include them in our analysis.
+
+First, let us look into the `vote16` variable. We can use the `table` function to explore the response categories:
+```{r}
+# create table to look into the response categories
+table(gss_short$vote16)
+```
+We see that this variable has three response categories, `1`, `2`, and `3`. What do these numbers mean? To figure this out, we have to *look into the codebook*. Open the codebook and search for "VOTE16". You'll see that `1` stands for "voted," `2` for "did not vote," `3` for "ineligible," and `4`, `8`, and `0` for "No answer", "Don't know", and "Not applicable," respectively. 
+
+While it seems quite probable that at least one respondent refused to answer the question, we observe no of these responses in our dataset. *This is because they are already coded as missing values*. To check whehter this is indeed the case we can specify the `useNA` option in the `table` function as follows:
+
+```{r}
+# create table that shows also missing values
+table(gss_short$vote16, useNA = "ifany")
+```
+Notice that the number of cases (35) which are coded as missing is exactly equal to the number of respondents that responded with a "No answer" or "Don't know" in our codebook. 
+
+Suppose that we are also not interested in ineligible respondents and want them to be coded as missing values as well. To do so, we have to **recode** the variable `vote16`. With a `data.table` object, we can do this as follows:
+
+```{r}
+# recode vote16 == 3 observations as NA
+gss_short[vote16 == 3, vote16 := NA]
+```
+
+The `:=` operator assigns new values to variables in a `data.table`. The value of the right-hand side of `:=` will be assigned to the column on the left-hand side. If the designated column on the left-hand side of `:=` does not exist, it will be created. 
+
+So, in the code above, we subset the `data.table` by the condition `vote16 == 3` and then assign the value `NA` to the variable `vote16` for observations that meet this condition. (To be precise, we will be changing values *by reference*; I'll discuss what "by reference" means latter in the course). 
+
+After recoding or changing values of your dataset, **you should always(!) check whether the operation was successful** and whether you get the expected results. So, let us do this:
+
+```{r}
+# check results after recoding
+table(gss_short$vote16, useNA = "ifany")
+```
+Notice tha the category `3` is gone and that the number of `NA`s has increased by `132` observations. This is exactly what we would expect after recoding this variable. So, everything seems to be fine!
+
+Now, here is an important point. It is often **much safer** to create a new variable, rather than just recoding the old variable. It can happen that you did something wrong in your code, so that you want to go back; or you might want to create a new variable from the original variable. If you have not saved the recoded variable under a different name, there will be often no way to do so. For example, suppose that we want to analyze the "ineligible" respondents. There is no way, after putting all ineligible respondents into the `NA` category, to figure out who they are!
+
+So, let us use an alternative way to recode variables. As we have already messed up the `vote16` variable and there is no way of turning back. We have to load the data again:
+```{r}
+# reload dataset
+gss_short = fread(here("Lab3", "data", "gss2018_short.csv"))
+```
+Now, instead of recoding the `vote16` itself, we create a new variable named `turnout`. This time, we not only put the ineligible respondents into the missing category but go one step further and recode the values of `vote16`, so that `1` stands for "Voted" and `0` stands for "Did not vote". We will use the `ifelse` function, with which you should be familiar by now. 
+```{r}
+# recode variable "into" a new variable turnout
+gss_short[
+  , turnout := ifelse(vote16 == 1, 1,
+                      ifelse(vote16 == 2, 0,
+                             NA))
+]
+```
+
+This might look a little bit confusing to you, at first. But I believe that you should be able to figure out what is going on here.
+
+> **EXERCISE** Explain, step by step, what we have done by the code above.
+
+After running that code, we should check whether the new variable `turnout` was created in the way we intended. As we have created a new variable, we can check the relation between `vote16` and `turnout` by creating a **crosstable** between these two variables. This is done by simply entering two variables into the `table` function:
+```{r}
+# check whether recoding was successful
+gss_short[, table(turnout, vote16, useNA = "ifany")]
+
+# note: we could have also used
+# table(gss_short$turnout, gss_short$vote16, useNA = "ifany")
+```
+We see that all values of `2` in the `vote16` variable are mapped into `0` of the `turnout` variable, `1`s are mapped into `1`, and the rest is mapped into `NA`.
+
+> **Style Suggestions** 
+>
+>1. After changing/recoding parts of your dataset, **always (!)** check whether the operation was successful.
+>2. When recoding variables, **create** a new variable, rather than changing the old one.
+
+Next, let us recode the `sex` variable, so that `1` stands for "female" and `0` stands for "male," by creating a new variable named `female`. Again, by checking the codebook, we see that a `1` in the `sex` variable stands for "Male" and a `2` for "Female". We might recode this variable as follows:
+```{r}
+# recode the sex variable
+gss_short[!is.na(sex), female := ifelse(sex == 2, 1, 0)]
+```
+Notice that we subset the `data.table` by `!is.na(sex)`. The `is.na(sex)` will return a logical vector which is `TRUE` when the `sex` variable is missing (i.e., `NA`) and a `FALSE` otherwise. Then the exclamation mark (`!`) will negate all elements in this vector (i.e., `TRUE` becomes `FALSE` and `FALSE` becomes `TRUE`). So, we are creating the `female` variable only for those rows of the `data.table` for which `sex` is not missing. One might ask then, "what happens to the rows of for which `sex` is `NA`? In this particular dataset, there are no rows in which `sex` is missing; however, if there were some rows, the `female` variable will be set, by default, to `NA`.
+
+> **EXERCISE** Check the codebook and determine which values of the `educ` variable are missing values. Which values of the `educ` variable in our dataset might be set to `NA`? 
+
+Now that we have recoded all of our variables, let us save it, this time under the name `gss_recoded.csv`.
+
+```{r}
+# save dataset, with variables recoded, as gss_recoded.csv
+fwrite(gss_short, here("Lab3", "data", "gss_recoded.csv"))
+```
+
+So, whenever we want to do an analyses that involves only the three variables `educ`, `sex`, and `vote16` (now recoded as `educ`, `female`, and `turnout`) we can load this dataset in which we have recoded the variables in a way that they are ready to use.
+
+<br>
+
+# One Sample t-test
+
+Let us recap some of the statistical theory you've learned in the last lecture. Suppose we are interested in the average years of formal education (let's just call this average education) in the population. As 12 years correspond to high-school graduates, we might hypothesize that the average education in the population is 14, and use the GSS to test whether this hypothesis is plausible.
+
+## The Ideal Procedure
+
+Recall that **hypotheses are always about population parameters** and not the sample. As we have our sample already in our hands, there is nothing to test here: We know exactly the average education of the individuals included in it! Yet, as it was randomly sampled from the population, we can use it to make inference to the population parameter of interest (A small note: the GSS uses a complex probability sampling design to sample individuals that are representative of the U.S. There are ways to incorporate these survey designs in our inferential procedure. Here, however, we will simply assume that this sample was obtained by simple random sampling.)
+
+Let $\mu$ be the average education in the population. Our null hypothesis is that 
+
+$$H_{\text{null}}: \mu = 14$$
+
+We might state our alternative hypothesis as
+
+$$ H_{\text{alt}}: \mu \ne 14.$$
+
+This means that $\mu$ is either larger or 14 or smaller than it.
+
+In the classical hypothesis testing framework, the next step is to set an $\alpha$-value. Recall that this value is the *maximal probability we allow for a Type I error* (i.e., rejecting the null hypothesis when, in fact, the null hypothesis is true). In the social sciences, this value is usually set to $\alpha = 0.05$. 
+
+Next, we choose a **test statistic** to examine the hypotheses. There are in fact many test statistics that can be used to test the hypotheses. Here we focuse on the t-test, which uses a very specific (and also very good) one. We start by asking "what would be the sampling distribution of the sample mean **if our null hypothesis were true**?" We might rely on the Central Limit Theorem to obtain an approximate answer. The theorem states that
+
+$$\frac{\bar X - \mu}{\sigma / \sqrt{n}} \sim \text{Normal}(0, 1)$$
+
+as $n \rightarrow \infty$. So, **if the null hypotheis $\mu = 14$ were indeed true**, the statistic $\frac{\bar X - 14}{\sigma / \sqrt{n}}$ should follow a standard Normal distribution as the sample size grows large. Notice that we have substituted $14$ for $\mu$ in the last expression. Also, always keep in mind that the sampling distribution we are talking about here is not just any sampling distribution but the sampling distribution *of some statistic* (the sample mean) and further *under the assumption that the our null hypothesis is true.* 
+
+If we were to design a study, we would be able to set the sample size $n$ by ourselves and the sample mean of our sample could be calculated after collecting the sample. The only part we are lacking is thus the population standard deviation $\sigma$. Yet, in most situations there is no way to know it without observing the population itself! 
+
+So, we instead substitute the sample standard deviation, $S$ for $\sigma$. This gives us our test statistic we will use to examine the hypotheses:
+
+$$ T = \frac{\bar X - \mu}{\widehat{\text{SE}}(\bar X)}.$$
+where
+$$\widehat{\text{SE}}(\bar X) = S / \sqrt{n}.$$
+
+Now, *if* our samples, $X_i$, $i= 1,2,...,n$, were distributed according to a Normal distribution with mean $\mu$ and standard deviation $\sigma$, then $T$ will follow a $t$-distribution with $n - 1$ degrees of freedom. That is,
+
+$$ T \sim \text{t}(n - 1).$$
+
+Of course, for the case of education, it is highly unlikely that our samples come from a Normal distribution (think about why). But we still use the $t$-distribution to test our hypothesis, as it has been shown to be quite robust to the violation of the assumption of Normally distributed samples.
+
+If we are designing a study, we would also decide how many samples we want to collect (rather than treating the sample size as a given) based on considerations regarding the statistical power we want to achieve in our hypothesis test. Obviously, we will not collect any data in this lab but use the GSS. So, let us treat the sample size as given and quickly calculate it (I'll explain the code in a bit!). 
+```{r}
+# sample size
+n = gss_short[!is.na(educ), .N]
+print(n)
+```
+As $n = 2,345$, the statistic $T = \frac{\bar X_n - 14}{\widehat{\text{SE}}(\bar X)}$ will approximately follow a $t$ distribution with $\nu = 2,344$ degrees of freedom. 
+
+Now, recall that the $t$ distribution is symmetric about zero. Hence, we can find a **critical value** $t_{\alpha, \nu}^\ast$, such that $\Pr[T  \in (-t_{\alpha, \nu}^\ast, t_{\alpha, \nu}^\ast)] = 1 - \alpha$, based on the same logic we followed to create a confidence interal in the [previous lab](https://htmlpreview.github.io/?https://github.com/baruuum/intro_to_stats_2019/blob/master/lab2/lab2.html#confidence-intervals). As we have set $\alpha = 0.05$, the interval $(-t_{\alpha, \nu}^\ast, t_{\alpha, \nu}^\ast)$ should therefore contain 95\% of the probability density of a $t$-distribution with $2,344$ degrees of freedom, which is shown as the grey area in the plot below:
+```{r echo = F}
+x = seq(from = - 5, to = 5, by = .01)
+alpha = 0.05
+c_val = qt(1 - alpha / 2, df = 2344)
+tmp_df = data.table(x = x, y = dt(x, df = 2344))
+
+ggplot(tmp_df, aes(x = x, y = y)) + 
+  geom_area(
+      data = tmp_df[x >= -c_val & x <= c_val],
+      aes(y = y), 
+      fill = "grey", 
+      color = NA, 
+      alpha = .5
+  ) + 
+  geom_area(
+      data = tmp_df[x > c_val],
+      aes(y = y), 
+      fill = "purple", 
+      color = NA, 
+      alpha = .5
+  ) + 
+  geom_area(
+      data = tmp_df[x < -c_val],
+      aes(y = y), 
+      fill = "purple", 
+      color = NA, 
+      alpha = .5
+  ) + 
+  geom_text(
+      data = data.table(
+        x = c(-2.3, 2.3),
+        y = c(.3, .3),
+        labs = c("-t*", "t*")
+      ), 
+      aes(x = x, y = y, label = labs)
+  ) +
+  geom_line(col = "black") +
+  geom_vline(xintercept = c_val, col = "black", lty = 2) +
+  geom_vline(xintercept = -c_val, col = "black", lty = 2) +
+  scale_y_continuous(
+      breaks = NULL, 
+      expand = expand_scale(mult = c(0, .1))
+  ) +
+  theme_bw() +
+  labs(x = "", y ="") + 
+  theme(panel.grid = element_blank())
+```
+This is exactly the region into which our test statistic $T$ would fall with a probability of $1-\alpha$ *if the null hypothesis $\mu = 14$ were true.* On the other hand, still maintaining the assumption that the null is true, our test statistic, $T$, will fall into the purple area with probability $\alpha = 0.05$. Thus, if we were to adopt the decision rule to *reject* the null hypothesis if $T$ falls outside of the grey area, we would make a Type I error with a probability of at most $\alpha = 0.05$. 
+
+So "**reject the null hypothesis** if $T$ falls outside of $(-t_{\alpha, \nu}^\ast, t_{\alpha, \nu}^\ast)$---i.e., the purple area---and **do not reject the null hypothesis** if $T_n$ falls inside of $(-t_{\alpha, \nu}^\ast, t_{\alpha, \nu}^\ast)$---i.e., the grey area" is the decision rule we should follow if we want to control the probability of commiting a Type I error below $\alpha = 0.05$. The purple areas in the tails, are called the rejection region, since we would reject the null hypothesis if the *observed* statistic in our sample falls into that region.
+
+The only thing that remains to figure out is to find the value $t_{\alpha, \nu}^\ast$. We will use, again, the fact that the $t$-distribution is symmetric. If the grey area in the plot above contains 95\% of the probability and the distribution is symmetric about zero, it must be the case that purple area on the left contains a probability of $\alpha / 2$. Thus, using the quantile function of the $t$-distribution, we obtain $t_{\alpha, \nu}^\ast$ as
+```{r}
+# alpha value
+alpha = 0.05
+# obtain t_val
+t_val = -1 * qt(0.5 * alpha, df = n - 1)
+paste("Critical value :", round(t_val, 3))
+```
+
+To summarize, the procedure so far:
+
+1. Set up the null hypothesis and the alternative hypothesis
+    + In this example, this is $H_{\text{null}}: \mu = 14\text{ vs. } H_{\text{alt}}: \mu \ne 14$.
+2. Select a $\alpha$ value
+    + In the social sciences, $\alpha = 0.05$ is usually used
+3. Select a test statistic
+    + To test hypotheses about the population mean, we used the test statistic $T_n = \frac{\bar X - \mu}{\widehat{\text{SE}}(\bar X)}$, where $\widehat{\text{SE}}(\bar X) = S / \sqrt{n}$.
+4. Select a sample size (based on considerations of statistical power)
+    + Since we are not designing our study ourself, but use a given dataset, we have omitted this step and just used the sample size we have.
+5. Derive the sampling distribution of your test statistic under the assumption that the null hypothesis is true
+    + We have learned that $T$ is approximately distributed as a $t$-distribution with $n - 1$ degrees of freedom
+6. Derive the critical value and the rejection region
+    + The critical value was derived as the value $t_{\alpha, \nu}^\ast$ that satisfies $\Pr\left[T \le -t_{\alpha, \nu}^\ast\right] = \frac{\alpha}{2}$  and the rejection region as $(-\infty, -t_{\alpha, \nu}^\ast)\cup (t_{\alpha, \nu}^\ast, \infty)$ (i.e., the purple region of the plot). 
+
+In the classical testing framework, everything stated so far is done **before collecting any data.** We set up our experiment using the steps 1. to 6., *then* collect our data, calculate our *obvserved* test statistics, and decide whether to reject or not reject the null hypothesis. 
+
+Also, notice that *we never accept the null hypothesis*; we either reject the null or do not reject the null. That $T$ fall into the grey area does not give us much evidence that $\mu$ is indeed equal to $14$. It just signifies that we don't have enough evidence to reject the null hypothesis. 
+
+## Calculating the Test Statistic and Making a Decision
+
+Suppose that we did all of these things beforehand and now collected the data (which is the GSS!). Thus the `gss_recoded.csv` is our *observed* sample. 
+
+Let us calculate the sample size, $n$, the sample mean, $\bar X$, and the sample standard deviation, $S$:
+
+```{r}
+# sample size
+n = gss_short[!is.na(educ), .N]
+
+# sample mean
+xbar = gss_short[, mean(educ, na.rm = T)]
+
+# sample standard deviation
+s = gss_short[, sd(educ, na.rm = T)]
+```
+
+Notice that the code for calculating the sample size and the mean are slightly different from the previous labs. The reason for the added complexity is the presence of missing values. Although the number of rows in `gss_short` is ``r  nrow(gss_short)`` there are 3 missing values in the variable `educ` which reduces the effective number of samples that we use in our inference to ``r n``. 
+
+In the calculation of our sample size, we first subset `gss_short` to only those rows which are not missing on the `educ` variable, and thereafter use `.N`. You might wonder what `.N` is, since we don't have any variables in our dataset named `.N`. This is one of the special functions in `data.table` that calculates the number of rows. Since, we have subsetted our dataset to those rows for which `is.na(educ)` is `FALSE`, this will count the number of non-missing observations for the `educ` variable.
+
+Similarly, in calculating the sample mean and sample standard deviation, we add the `na.rm = TRUE` option to remove the missing values before calculating the statistics.
+
+Let us look at the sample size, the sample mean, and the sample standard deviation:
+```{r}
+paste("Sample size :", n)
+paste("Sample mean :", round(xbar, 3))
+paste("Sample standard deviation: ", round(s, 3))
+paste("Est. standard error of the mean: ", round(s / sqrt(n), 3))
+```
+
+Next, we calculate our test statistic $T_n$:
+```{r}
+# test statistic T_n
+test_stat = (xbar - 14) / (s / sqrt(n))
+
+# print test statistic
+paste("Test statistic :", round(test_stat, 3))
+```
+Recall that our critical value was
+```{r}
+paste("Critical value :",  round(t_val, 3))
+```
+and thus, our rejection region is $(-\infty, -1.961) \cup (1.961, \infty)$. 
+
+Clearly, our test statistic $T = - 4.367$ falls into this region. Therefore, following our decision rule, we reject the null hypothesis that $\mu = 14$.
+
+It is really surprising how little we do *after* we collect our data. Most of the work is spent on setting up the hypotheses, deciding on what test to use, deriving its distribution under the null hypothesis, and collecting the data. After we have the data already in our hands, what remains is simply calculating the test statistic and following the decision rule that we've set up for ourselves.
+
+Before going over to p-values, notice that we have rejected the null hypothesis that the average education of the population is $\mu = 14$ years based on a sample average value of $\bar X = 13.732$. This might seem odd, since these two values are quite close. On the other hand, it is indeed highly unlikely (a priory) that the population mean will be "exactly" equal to $14$ years. That we reject the null hypothesis just shows us that we have enough data to detect very small differences, not that the difference is substantively meaningful, which is just a long-version of saying statistical significance is not substantive significance. Rather, "significance" here means that our test "signifies" a difference between our null hypothesis and our data.
+
+## p-values
+
+We might also ask the question "Given that the null hypothesis is true, what is the probability to observe a test statistic that is at least as extreme (in magnitude) as the one we have observed in our sample?" The probability that we are seeking here is what people call the **p-value**.
+
+We have already all the pieces to calculate the p-value. Under the null hypothesis, our test statistic follows a $t$-distribution with $n - 1$ degrees of freedom. Let $\hat \tau$ be the test statistic that is observed in our sample. That is, $\hat\tau$ is the realization of the random variable $T$, and in our GSS sample its value is $\hat\tau = -4.367$. The probability to observe a test statistic, $T$, at least as extreme as $\hat \tau$ is the probability that $T$ is either smaller than $- |\hat\tau|$ or larger than $|\hat\tau|$. In the particular case, where the sampling distribution of the test statistic under the null hypothesis is symmetric about zero, this is equal to $$2\times \Pr[ T \le -|\hat\tau|].$$
+
+We note that the probability $\Pr[T \le - |\hat\tau|]$ is the cumulative distribution function (CDF) evaluated at the $-|\hat\tau|$. The CDF of the $t$ distribution can be calculated in R using the `pt` function. So, the p-value of our test can be calculated as
+```{r}
+# p-value
+p_val = 2 * pt(-abs(test_stat), df = n - 1)
+paste("p-value :", round(p_val, 10))
+```
+
+You can test hypotheses we've set up about the population mean with p-values as well. The decision rule would be to reject the null hypothesis if your calculated p-value is smaller than $\alpha$. This will lead to the exact same decisions as that we came up with when setting up the rejection region using critical values. 
+
+>**EXERCISE** Explain why these two decision rules to test hypotheses are equivalent (i.e., why they give the same answers).
+
+## Using the `t.test` function
+
+Of course, we won't calculate all of this by hand everytime we want to test a hypothesis about a population mean. There is a R function that does everything for us. Namely, the `t.test` function. For testing 
+
+$$H_{\text{null}}: \mu = 14 \text{   vs   } H_{\text{alt}}: \mu \ne 14,$$
+
+we use
+
+```{r}
+t.test(
+  x = gss_short[!is.na(educ), educ], # the data
+  mu = 14,                           # the null hypothesis
+  alternative = "two.sided"          # test direction
+)
+```
+The results first tell us that this is a `One Sample t-test`, and then displays the data we have entered. What follows is the value of the test statistic (`t`), the degrees of freedom (`df`) of the `t`-distribution that is used in the test, and the p-value. Notice that the last three numbers are exactly the same as those that we have calcualted by hand.
+
+I believe the only thing that needs a little bit of explanation is the `alternative = "two.sided"` option. Notice that our hypothesis was set up as
+$$ H_{\text{null}} : \mu = 14\text{   vs   } H_{\text{alt}}: \mu \ne 14.$$
+The test for such a pair of hypotheses is called a **two-tailed** test. On the other hand, tests that examine the pair of hypotheses of the form
+$$ H_{\text{null}} : \mu > 14\text{   vs   } H_{\text{alt}}: \mu \le 14$$
+or 
+$$ H_{\text{null}} : \mu < 14\text{   vs   } H_{\text{alt}}: \mu \ge 14$$
+are called **one-tailed** tests. In the social sciences, it seems to be the convention to use two-tailed tests by default. This is also what we have done here. But it is very important to keep in mind that using a one-tailed test will change the rejection region as well as the p-value. So be careful and always state, when reporting the results, whether your p-value stands for a two-tailed or one-tailed test.
+
+<br>
+
+# Comparing the Mean of Two Groups with Unequal Variances (Two-sample t-test)
+
+Once we have established how to use the t-test for a population mean, the move to the t-test for two independent samples is straightforward. Yet, the math becomes more complicated, especially if we assume (as we will do here) that the population variances of the two groups are not the same. So, let us not go too deep into the mathematics. 
+
+In the case of a two-tailed test, we are testing the hypotheses
+
+$$ H_{\text{null}} : \mu_1 = \mu_0\text{   vs   } H_{\text{alt}}: \mu_1 \ne \mu_0,$$
+where $\mu_1$ and $\mu_0$ are the population means of first and the second group, respectively. Similarly to using the sample mean of a variable to make inference for the population mean, here we use the difference in the means of group $1$ and group $0$, to make inference regarding the difference in the group-means in the population.
+
+For example, suppose we are interested in whether the two genders (`male = 0` and `female = 1`) differ in their years of education. Let the sample mean of the male respondents be $\bar X_0$ and that of female respondents be $\bar X_1$. Then, our test statistic is
+
+$$T_{\text{diff}} = \frac{(\bar X_1 - \bar X_0) - (\mu_1 - \mu_0)}{\widehat{\text{SE}}_{\text{diff}}} = \frac{\bar X_1 - \bar X_0}{\widehat{\text{SE}}_{\text{diff}}}.$$
+
+The term $(\mu_1 - \mu_0)$ disappears from the numerator as our null hypothesis sates that $\mu_1 = \mu_0$. The formula for the estimated standard error is given as
+$$\widehat{\text{SE}}_{\text{diff}} = \sqrt{\frac{S_{0}^2}{n_0} + \frac{S_{n_1}^2}{n_1}},$$
+where $n_0$ and $S_0$ are, respectively, the sample size and the sample standard deviation of group $0$. $n_1$ and $S_1$ are defined analogously. This statistic will follow a $t$ distribution **if the null hypothesis $\mu_1 = \mu_0$ is true**. 
+
+The degrees of freedom of the t-distribution will be $n_0 + n_1 - 2$ **if the population variance of the two groups is equal**.
+This is often not a very realistic scenario. Out of this reason the Welch's approximation (which we will not define here, but can be found [here](https://en.wikipedia.org/wiki/Welch%27s_t-test) if you are curious) is often used for the degrees of freedom of the $t$ distribution. This is, in fact, the default option in the `t.test` function that we'll use below.
+
+But let us first try to do this by hand. As the sample sizes for both of the gender groups is quite large, we use the Normal distribution to approximate the sampling distribution of the difference in means.
+
+We might code this up as follows:
+```{r}
+# create new dataset with no missing values for educ and female
+new_dat = gss_short[!is.na(educ) & !is.na(female)]
+
+# sample size, mean, and standard deviations in education for male respondents
+n_0 = new_dat[female == 0, .N]
+xbar_0 = new_dat[female == 0, mean(educ)]
+s_0 = new_dat[female == 0, sd(educ)]
+
+# sample size, mean, and standard deviations in education for female respondents
+n_1 = new_dat[female == 1, .N]
+xbar_1 = new_dat[female == 1, mean(educ)]
+s_1 = new_dat[female == 1, sd(educ)]
+```
+Using the formula from above, we obtain the test statistic:
+```{r}
+# difference in the mean education of female and male respondents
+m_diff = xbar_1 - xbar_0
+
+# standard error of the mean-difference
+se_diff = sqrt((s_0^2 / n_0) + (s_1^2 / n_1))
+
+# test statistic
+t_diff =  m_diff /se_diff
+
+# print results
+paste("Sample mean difference :", round(m_diff, 3))
+paste("Std. Error of difference :", round(se_diff, 3))
+paste("Test statistic: ", round(t_diff, 3))
+```
+The p-value can be calculated as above, but this time using the `pnorm` function, which gives us the CDF of the Normal distribution.
+```{r}
+# p-value based on Normal distribution
+p_diff = 2 * pnorm(-abs(t_diff))
+
+# print p-value
+paste("p-value (Norm. approx.) :", round(p_diff, 3))
+```
+
+To use the $t$-distribution for the test, with Welch's approximation for the degrees of freedom, we use again the `t.test` function: 
+
+```{r}
+# two sample t-test
+# note: 1) notice that the data for one group is entered as x
+#          and the data fore the other group is entered as y
+#       2) The degrees of freedom of the t-distribution is 
+#          approximated by the method proposed by Welch
+t.test(
+  x = gss_short[!is.na(educ) & female == 1, educ], # female data
+  y = gss_short[!is.na(educ) & female == 0, educ], # male data
+  mu = 0,                                          # null hypothesis
+  alternative = "two.sided"                        # direction of alternative
+)
+```  
+Notice that the p-value is larger than our $\alpha$-level of $0.05$. We therefore conclude that we don't have enough data to reject the null hypothesis that men and women differ in their average years of education in the population. 
+
+The reported results are also equal (in the case of the test statistic) or extremely close to the hand-calculated values (in the case of the p-value). This is expected as with approximately $2,000$ degrees of freedom, the $t$ distribution should be very close to the standard Normal distribution.
+
+Lastly, if we were ready to assume that the population variances of the two groups we comapre are equal, we can specify they `var.equal` option of the `t.test` function to `TRUE`.
+
+```{r}
+t.test(
+  x = gss_short[!is.na(educ) & female == 1, educ], # female data
+  y = gss_short[!is.na(educ) & female == 0, educ], # male data
+  mu = 0,                                          # null hypothesis
+  alternative = "two.sided" ,                      # direction of alternative
+  var.equal = TRUE                                 # assume equal variances
+)
+```
+Notice that the test statistic, the degrees of freedom, and the p-value are different from that we derived above. The degrees of freedom is now $n_1 + n_2 - 2$. The reason for the differences in the test statistic, however, comes from fact that we use a different formula for the standard error. Under the assumption that both groups in the population have the same variance, it makes sense to generate a single estimator for the variance of the two groups, rather than estimating the variance of the groups separately. As the test statistic is constructed by dividing the difference of the sample means (minus the difference assumed in the null hypothesis) by the standard error, this will lead to different test statsitics. A short wikipedia search will give you the formulae for the pooled versions of the t-test.
+
+
+<br>
+
+# Crosstables
+
+When examining the relationship between two categorical variables (and if the number of categories is not too large for both variables), cross-tabulations offer a convenient way to display data. We have already encountered a crosstable, namely when we checked whether our code for recoding variables worked properly.
+
+Here, let us examine the relationship between gender and voting turnout. we first create a new dataset that has no missing values in the variables `female` and `turnout`. Thereafter, we use the `table` function to create a crosstable:
+
+```{r}
+# create new data with no missin values in turnout and female
+tab_dat = gss_short[!is.na(turnout) & !is.na(female)]
+
+# create crosstable and save it into the object mytab
+mytab = tab_dat[, table(female, turnout)]
+
+# check the class of the new object
+class(mytab)
+
+# print the table
+print(mytab)
+```
+
+> **EXERCISE** 
+>
+> 1. According to the table, what is the probability of being male and turning out?
+> 2. According to the table, what is the probability of turning out given that one is a male respondent?
+
+We can read out that in both gender groups more respondents report to have voted in the 2016 election then not. It is more difficult to discern whether there was any gender difference in turnout, however, mainly because the number of male and female respondents in our sample are not the same. 
+
+To examine this question, it is helpful to calculate the row-wise percentages. These would show what proportion of respondents who turned out to vote on election day, broken down by gender. 
+
+There are multiple ways to examine the row-percentages, one is to use the `prop.table` function (applied to a `table` object):
+```{r}
+prop.table(mytab, margin = 1)
+```
+The `margin = 1` option tells the `prop.table` function to produce row-percentages. You can check this by summing the percentages across the rows; they should sum to one. So, it seems that females and males (at least reported to) have turned out at similar rates at election day. 
+
+The column-wise percentages can be produced by setting the margins option to `2`:
+```{r}
+prop.table(mytab, margin = 2)
+```
+So, among those who turned out (`turnout = 1`), about 45 percent were male and 54 percent were female.
+
+Lastly, we might calculate the "total" percentages, where the count of each cell is simply divided by the sample size:
+```{r}
+prop.table(mytab)
+```
+
+## Independence in Crosstables
+
+An important question to ask when examining crosstables is whether the rows and the columns are independent of each other. We might start from creating a crosstable that represents a state in which the rows and columns are indeed independent; thereafter we can compare our actual table with this hypothetical table and look how much the latter deviates from the latter. This will lead us to the Pearson's chi-squared test.
+
+So, what should we expect if the rows and columns are independent of each other? Suppose we pick randomly a respondent of our dataset. What would be the probability that this respondent will be female and would have turned out on election day? Notice that probability involves two random variables: being female and turning out to vote. Our best guess for this probability would be the `(2,2)th` cell of the last table we've produced, namely the proportion of respondents in our data that are simultaneously female and have voted. 
+
+To ease exposition, let us introduce a little bit of notation. Let $f_{ij}$ be the frequencey (the count) in the $(i,j)$th cell of our table. Using this notation, our small $2\times 2$ table might be represented as
+
+|Variable | turnout = 0 | turnout = 1 | Total |
+| --- | ---| --- | --- |
+|**female = 0**| $f_{11}$ | $f_{12}$| $f_{1.}$ |
+| **female = 1 **  |$f_{21}$ | $f_{22}$| $f_{2.}$ |
+| **Total** | $f_{.1}$ | $f_{.2}$| $N$|
+
+Notice that we have also added the **marginal** counts. For example, $f_{1.}$ is the row-sum of the frequencies in the table. It will therefore be the total number of male respondents in our dataset; $f_{.2}$, on the other hand, would be the total number of respondents that reported to have turned out (it's the sum of frequencies along the second column), and so on.
+
+Now, what would be the probability if selecting a female respondent and a respondent that has turned out to vote were independent events? It would be the product of the probability of selecting a female respondent and selecting a respondent who turned out to vote. Given the counts in the `mytable` object, our best guess for the first probability would be 
+$$\frac{f_{2.}}{N} = \frac{f_{21} + f_{22}}{N} = \frac{369 + 823}{2181} = .547$$ which is just the proportion of female respondents. Our best guess for the second probability would be 
+$$\frac{f_{.2}}{N} = \frac{f_{12} + f_{22}}{N} = \frac{700 + 823}{2181} = .698$$
+which is the proportion of respondents who said that they have turned out on election day.
+
+Let $p_{ij}$ be the expected proportion of respondents who are simultaneously female and voted *under a scenario where gender and turnout are independent*. Thus, $p_{22}$ would represent the expected proportion of female respondents who have voted under independence. Then
+
+$$p_{22} =  \frac{f_{2.}}{N} \times \frac{f_{.2}}{N} = \frac{f_{2.}f_{.2}}{N^2} = 0.382.$$
+
+Further, let us denote the *expected* frequency under independence of the rows and columns of the $(i,j)$th cell of our table by $e_{ij}$. This number is simply $p_{ij}$ multiplied by $N$---i.e., if we expect a proportion of $p_{ij}$ individuals to fall into the $(i, j)$th cell, and we have a total of $N$ individuals in our sample, then we should expect that $p_{ij} \times N$ individuals should be found in the $(i,j)$th cell. Hence, under independence, our expected frequency of female respondents who turned out is 
+
+$$e_{22} = N \times p_{22} = \frac{f_{2.}f_{.2}}{N} = 832.378.$$
+
+In R, we can calculate this number from the table as follows:
+```{r}
+# calculate row-wise sums of counts in table (f_{1.}, f_{2.})
+rsums = rowSums(mytab)
+# calculate column-wise sums of counts in table (f_{.1}, f_{.2})
+csums = colSums(mytab)
+# get total count of the table (N)
+N = sum(mytab)
+
+# proportion of (female = 1 and turnout = 1) under independence
+p22 = (rsums[2] / N) * (csums[2] / N)
+
+# expected frequency under independence for (female = 1, turnout = 1)
+e22 = p22 * N
+
+paste("expected prop. :", round(p22, 3))
+paste("expected count :", round(e22, 3))
+```
+
+>**EXERCISE** Check what the `rowSums` and `colSums` functions do. What would be the first element of the `rsums` object?
+
+Further, we can do this for every cell of our crosstable by calculating the outer-product between the two vectors `rsums/N` and `csums/N` (if you are unfamiliar with outer products, you could also run a loop to fill the matrix of expected proportions; this would be, however, much slower.)
+```{r}
+# generate table of expected proportions
+ptab = tcrossprod(rsums/N, csums/N)
+print(ptab)
+
+# table of expected frequencies
+ftab = N * ptab
+print(ftab)
+```
+
+## Pearson's Chi-squared Test
+
+Now, suppose we have the two hypotheses:
+
+$$H_{\text{null}}: \text{Being female and turning out to vote are independent}$$
+
+and
+
+$$H_{\text{alt}}: \text{Being female and turning out to vote are dependent}$$
+
+It would make sense to test these hypotheses by looking at the discrpancy between 1) observed cell frequencies of our crosstable and 2) the expected frequencies under the null hypothesis that the rows and columns of the tables are independent.
+
+This is exactly what the Pearson's chi-squared statistic does. Let $R$ and $C$ be, respectively, the number of rows and columns of a crosstable. The Pearson's chi-squared statistic is defined as
+
+$$ X^2 = \sum_{i=1}^R\sum_{j = 1}^C\frac{(f_{ij} - e_{ij})^2}{e_{ij}}.$$
+
+In words, for each cell of our crosstable, we subtract the observed frequency from the expected frequency and square it; then, we divide the result by the expected frequency; and, lastly, we sum the results across all cells of our crosstable.
+
+If the cell frequencies of the observed crosstable are not too small, the sampling distribution of the test statistic $X^2$  under the null hypothesis that the rows and columns are indpendent can be approximated by the chi-squared distribution with $(R-1)(C-1)$ degrees of freedom. In our current example, the degrees of freedom of the chi-squared distribution to which we want to compare our test statistic is therefore equal to one.
+
+One important question to ask at this point is *how*, exactly, we should compare our test statistic with the chi-squared distribution. In the t-test, we defined the critical region as the union two intervals $(-\infty, t_{\alpha, \nu}^\ast)\cup (t_{\alpha, \nu}^\ast, \infty)$. Hence, too large or too small values of the test statistics lead to a rejection of the null hypothesis. In the Pearson's chi-squared test, on the other hand, we use a one-sided test. 
+
+The reason can be intuitively understood as follows: if you look into the definition of the test statistic, we see that it cannot be negative. If the expected frequencies are exactly equal to the observed frequencies $X^2$ would be zero; and for any discrepancy between these two tables (expected vs. observed) the test statistic will get larger. If we would reject our null hypothesis for "too small" values of the realized $X^2$, we would, in effect, decide to reject the hypothesis when it fits our data "too well." Clearly, this is not what we want.
+
+Now, the chi-squared distribution with 1 degree of freedom looks like the following:
+
+```{r, echo = F}
+x = seq(from = 0, to = 10, by = .01)
+alpha = 0.05
+c_val = qchisq(1 - alpha, df = 1)
+tmp_df = data.table(x = x, y = dchisq(x, df = 1))
+
+ggplot(tmp_df, aes(x = x, y = y)) + 
+  geom_area(
+      data = tmp_df[x >= c_val],
+      aes(y = y), 
+      fill = "purple", 
+      color = NA, 
+      alpha = .5
+  ) + 
+  geom_line(col = "black") +
+  geom_vline(xintercept = c_val, col = "black", lty = 2) +
+  scale_y_continuous(
+      breaks = NULL, 
+      limits = c(0, 1),
+      expand = expand_scale(mult = c(0, 0))
+  ) +
+  scale_x_continuous(expand = c(0,0)) + 
+  theme_bw() +
+  labs(x = "", y ="") + 
+  theme(panel.grid = element_blank())
+```
+The dashed vertical line represents the critical value $x^\ast$ such that the area under the curve to the right of $x^\ast$ is equal to $\alpha = 0.05$. To recap a little bit, the distribution shown in the figure is the (sampling) distribution of the test statistic $X^2$ **under the assumption that the null hypothesis of independence is true**. Thus, if we adopt the decision rule to reject the null hypotheses only for observed $X^2$ values that are larger than the critical value $x^\ast$, then the probability of falsely rejecting the null hypothesis, when in fact the null is true, would be smaller $\alpha = 0.05$.
+
+To obtain the critical value $x^\ast$ we can use the quantile function of the chi-squared distribution with one degree of freedom:
+```{r}
+c_val = qchisq(alpha, df = 1, lower.tail = FALSE)
+paste("Critical Value :", round(c_val, 3))
+```
+Thus, whenever we observe a $X^2$ statistic that is larger than 3.841, we should reject the null hypothesis. 
+
+Two points are worth noting about the code: we have *not* divided `alpha` by 2, since 0.05 of the probability should lie on the right of the critical value (rather than being evenly split between two tail-areas, as it was the case in the t-test). Second, we have specified the `lower.tail = FALSE` option, to obtain the value such that `alpha` of the probability in the distribution is located to the *right* of `c_val` (if `lower.tail = TRUE`, the `qchisq` function would return the value for which `alpha` of the probability lies on the left of the value).
+
+
+Next, let us calculate the Pearson's chi-squared statistic from our observed sample. This is a one-liner:
+```{r}
+# Pearson's chi-squared statistic
+test_stat = sum((mytab - ftab)^2 / ftab)
+paste("Pearson's X^2 :", round(test_stat,4))
+```
+We see that the test statistic in our sample is smaller than the critical value of $3.841$. Hence, we decide *not* to reject the null hypothesis.
+
+We might also calculate the p-value of the test, by calculating the probability of observing a value of $.7723$ or larger, if the null hypothesis were true (i.e., if the plot shown above would be the sampling distribution of the test statistic).
+```{r}
+# p-value
+p_val = pchisq(test_stat, df = 1, lower.tail = F)
+paste("p-value :", round(p_val,4))
+```
+We see that the p-value is quite high: if the null hypothesis were true, we could expect to see test statistic of $.7723$ or larger with probability $.3795$. So, the observed test statistic is not a "surprising" value under the null hypothesis and we do not reject it.
+
+## Using the `chisq.test` and the `gtable::CrossTable` function
+
+Of course, as with the t-test, we won't have to calculate all of this by hand everytime we run a chi-squared test. Instead, we can use the `chisq.test` function:
+```{r}
+chisq.test(mytab, correct = F)
+```
+which gives exactly the same results as what we have derived above. 
+
+The `CrossTable` function of the `gtable` package makes the creation of corsstables very easy. For example, the same crosstable we have been working with, including their row percentages, can be created with the following code (recall that we've already loaded the `gtable` package):
+
+```{r}
+CrossTable(
+  tab_dat$female,    # what goes into the rows of the table
+  tab_dat$turnout,   # what goes into the columns of the table
+  prop.t = FALSE,    # don't show total percentages
+  prop.r = TRUE,     # show row percentages
+  prop.c = FALSE,    # don't show column percentages
+  prop.chisq = FALSE # don't show chi-square contributions
+)
+```
+Notice that the proportions in the table will sum to one if we sum them across rows. So, the percentages indeed represent row-wise percentages. To run a chi-squared test, we can specify the option `chisq` to be `TRUE`
+
+```{r}
+CrossTable(
+  tab_dat$female,    
+  tab_dat$turnout,   
+  prop.t = FALSE,    
+  prop.r = TRUE,     
+  prop.c = FALSE,    
+  prop.chisq = FALSE,
+  chisq = TRUE        # run chi-squared test
+)
+```
+Whether you use the `table` function or the more elaborat but less compact `CrossTable` function depends on your taste.

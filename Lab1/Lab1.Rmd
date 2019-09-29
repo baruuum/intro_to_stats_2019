@@ -1,0 +1,947 @@
+---
+title: "Lab1 - Working in R and Rstudio"
+author: "Barum Park"
+date: "9/13/2019"
+output: 
+    html_document:
+        keep_md: false
+        matjax: default
+        theme: yeti
+        highlight: textmate
+        toc: true
+---
+
+<style type="text/css">
+
+body{ 
+
+    font-size: 16px;
+    line-height: 1.7em;
+    <!-- text-align: justify; -->
+
+}
+
+blockquote {
+    padding: 10px 20px;
+    margin: 0 0 20px;
+    font-size: 16px;
+    border: solid 1px;
+}
+
+h1 { font-size: 32px; }
+
+h2 { font-size: 24px; }
+
+h3 { font-size: 20px; }
+
+.nobullet li {
+  list-style-type: none;
+}
+
+</style>
+
+<br>
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, 
+                      cache = FALSE,
+                      fig.align = "center",
+                      fig.width = 5,
+                      fig.height = 4)
+```
+
+# Using Rstudio
+
+I want to start this lab by introducing you to **Rstudio projects** (just **project** hereafter). While working with projects is not necessary, it helps you organize your work into separate environments with different default options. It also helps you to work efficiently with version control systems, such as Git, or creating your own R packages (Two topics we won't deal with in this course but which might become important for you later). We will also recap some of the basics of using R that we've covered in the Math Refresher.
+
+## Rstudio Projects
+
+To create a project, click on `File -> New Project -> New Directory -> New Project`. In the first line, enter a new directory name for the project; in the second line, specify where the directory should be created. 
+
+For example, my hard drive is split into two partitions, `C:/` and `D:/`, and I usually store all my R projects into a subfolder of `D:/wd/r`. An example would be `D:/wd/r/intro_stats2019`. If you have already created a directory for the the the Intro to Stats class, say `C:/NYU/Fall_2019/intro_to_stats`, I recommend that you create a `Labs` subdirectory there. That is, in the first line, you should enter `Labs`, and in the second line, `C:/NYU/Fall_2019/intro_to_stats` or the path to your folder for the current class (you can also click on "browse" to select the folder).
+
+As you might have noticed, subdirectories in R are represented by forward slashes (`/`) and not by a backslashes (`\`). You can also use two backslashes (`\\`) instead of one forward slash, e.g., `C:\\NYU\\Fall_2019\\intro_to_stats`.
+
+There is one thing I want to mention at this point:
+
+> **Style Suggestion** When creating directories to store files related to R projects/files, *do not use whitespaces in the path.* That is, instead of `C:/some path/to my Rscript.R` use `C:/some_path/to_my_Rscript.R`. Whitespaces can cause trouble some times.
+
+After specifying the project directory and the project name, **do not** click on any of the two options below the second line, but click on the `Open in new session` box in the lower-left corner. Then click on `Create Project`. If a new Rstudio session is opened, you've successfully created your first Rstudio project (congrats!).
+
+## Writing and Saving R scripts
+
+The project will be empty (you've just created it), so let us create our first **R script**. Click on `File -> New File -> R script`. You'll see that a window has opened with the title "Untitled1". Write the following into your first few lines:
+
+```{r}
+## Title  : Lab1
+## Author : Your name
+## Date   : today's date
+```
+
+As you'll remember from our math refresher, everything that comes after a `#` is treated as a comment. So, we are just creating some descriptions for the script we are going to create.
+
+Next, let us save our first script. You can do this by either clicking on the small disk icon in the upper-left corner of the window or pushing `Ctrl + s` (please use the shortcut). A new window will open. 
+
+1. Create a new directory named "Lab1" and move into that directory. 
+2. Type "Lab1.R" into the "file name" line.
+3. Click "Save."
+
+If you look into your "Files" window in Rstudio, you'll see that a new directory named "Lab1" has appeared; and if you click on that folder you'll find your "Lab1.R" file.
+
+Lastly, download the `simdat.csv` from my (github repository)[https://github.com/baruuum/intro_to_stats_2019/Lab1] and put it into your Lab1 directory.
+
+<br>
+
+# Working Directory
+
+By typing
+```{r, eval = F}
+getwd()
+```
+R will tell you the location of your current **working directory**. You can think of this directory as your default directory for this project. For example, if you save a file or a plot without specifying a directory, it will be saved into your working directory. If you are using Rstudio projects, your working directory will be automatically set to the directory in which your project is located whenever you open your project. You can also use `setwd()` to specify your working directory manually, but I don't recommend doing so. 
+
+Notice, however, that our R script is located at a subdirectory of the working directory, i.e., in `your_working_directory/Lab1`, so how could we access files in that subdirectory? I'll show you three ways to do this, among which the last one is the preferred.
+
+First, the most straightforward way is simply to write out the entire path to the file you want to access. If the file `Lab1.R` is in `C:/wd/r/intro_to_stats/Lab1`, you can write 
+```{r, eval = F}
+f_path0 = "C:/wd/r/intro_to_stats/Labs/Lab1/Lab1.R"
+```
+to save the path to your R script in the object `f_path0`. 
+
+Second, we can use the `paste` and `getwd` function. The `paste` function  concatenates strings together, while the `getwd` function returns the path to your current working directory. Let us first have a look at how the `paste` function works:
+```{r eval = F}
+paste("hello", "world", "!!")
+```
+You'll see that it creates a string with all of the arguments *separated by a whitespace*. If you don't want the whitespace, you can use the `sep` option to choose your own separator:
+```{r eval = F}
+paste("hello", "world", "!!", sep = "")
+```
+Now, to specify a path to the subdirectory `Lab1` of your working directory, you can use
+```{r, eval = F}
+# create object with path to Lab1 directory 
+f_path = paste(getwd(), "Lab1", sep = "/")
+
+# have a look into what the path looks like
+f_path
+```
+This will give you the path, as a string, to the subdirectory. To see what is in this directory, you can use
+```{r, eval = F}
+dir(f_path)
+```
+These are two possible methods, which I generally do **not** recommend. 
+
+## Using the `here` Package
+
+In this class, I recommend that you use the `here` package. First, we have to install it:
+```{r eval = F}
+install.packages("here", depenencies = TRUE)
+```
+Now, if you load the package
+```{r message = F}
+library("here")
+```
+you'll see that it tells you the directory where `here()` "starts." The `here` package will automatically locate the root directory of your project, using a set of heuristics (you can look into `?here` after loading the package to see the documentations). You can also reaffirm the starting directory of `here` by typing
+```{r eval = F}
+here()
+```
+Using the `here` function, we can specify the path to our subdirectory `Lab1` as follows:
+```{r eval = F}
+f_path_2 = here("Lab1")
+```
+We can look how the string looks like
+```{r eval = F}
+f_path_2
+```
+and check that the generated file paths are the same:
+```{r eval = F}
+f_path == f_path_2
+```
+Notice that `=` is used for assignment but `==` asserts whether two R objects are equal (it will return `TRUE` if they are equal and `FALSE` if not). If you would have another subdirectory named `llaabb` within the `Lab1` directory, you could generate a string of that path by using
+```{r eval = F}
+here("Lab1", "llaabb")
+```
+
+
+<br>
+
+# Loading Comma-separated files
+
+The most widely used data format to store tabular data is the comma-separated format. Usually these data are stored in files that end with `.csv`. We will use the `data.table` package to work with datasets throughout this course. 
+
+> **NOTE** Teaching R through the `data.table` package in sociology courses might be a little bit unusual. It seems that datasets are often analyzed using  `data.frame`s (the default data structure for datasets in R) or packages in the `tidyverse`. The reason for focusing on `data.table` is simple: it's just faster than other tools, especially when dealing with large datasets. As some of you will be dealing with large datasets in the future, I decided to use the `data.table` package for this course. I'll also introduce you to the `dplyr` package later. For now, I strongly recommend that you read through [this vignette](https://cran.r-project.org/web/packages/data.table/vignettes/datatable-intro.html) before next week's lab. Also, please try to follow the examples provided in the vignette. You don't have to understand everything in the vignette immediately; I'll introduce some of the functionalities one by one. But at least try to understand as much as you can. 
+
+To read a csv-file, we first need to load the `data.table` package
+```{r message = F}
+library("data.table")
+```
+and then use the `fread` function to read in the data (notice how I use the `here` function to specify the path to the file)
+```{r eval = T}
+pop = fread(here("Lab1", "simdat.csv"))
+```
+In most situations, each row of the dataset will represent a unit (e.g., individual, city, country, etc.) and the columns will contain characteristics of these units (e.g., age, population size, etc.), which we often call **variables**. You can have a quick look into the dataset by simply typing the name of the object, use the `dim` functions to get the dimensions of the data, or use the `names` function to check the variable names:
+```{r eval = F}
+# quick look into data
+pop
+
+# look into the first few rows
+head(pop)
+
+# get dimensions of the dataset
+dim(pop)
+
+# number of rows in dataset
+nrow(pop)
+
+# number of columns in dataset
+ncol(pop)
+
+# get variable names
+names(pop)
+
+# some summary statistics for each column 
+summary(pop)
+```
+
+It will be useful to store the number of rows and columns of the dataset for later use
+
+```{r, eval = T}
+# store rows and columns of the dataset
+N = nrow(pop)
+K = ncol(pop)
+```
+
+<br>
+
+# Subsetting a data.table Object
+
+Extracting (subsetting) row or columns from this dataset follows the same rules as that used for matrices, which was explained [here](https://htmlpreview.github.io/?https://github.com/baruuum/intro_to_stats_2019/blob/master/math_refresher/day2_R/IntroR.html#matrices). For example,
+```{r eval = F}
+# get the first column
+pop[, 1]
+
+# get the 21st row
+pop[21, ]
+
+# extract the 1st, 8th, and 1001st row and the second column
+pop[c(1, 8, 1001), 2]
+```
+Notice, however, that the extracted objects will *not* be `vectors` or `matrices` but `data.table` objects.
+```{r eval = F}
+class(pop[21, ])
+```
+Another way to extact columns from `data.table`s is to use the dollar sign(`$`) or using the variable names. Notice that different ways to extract columns will lead to different data structures:
+```{r eval = F}
+# this returns a vector
+dat$x2
+
+# this returns a vector as well
+pop[["x2"]]
+
+# this one is also a vertor
+pop[, x2]
+
+# this returns a data.table
+pop[, "x2"]
+
+# as does this one
+pop[, list(x2)]
+
+# or this one
+pop[, .(x2)]
+```
+I know that this can be confusing, but it will turn out to be useful in certain circumstances (as some operations require `data.table`/`data.frame` objects while others require `vector` or `matrix` objects). *It is important to keep track of what data structure is returned by what function in order to make sure that everything works smoothly.*
+
+We can also subset the `data.table` object by using the variables in the dataset. A short look into the dataset reveals that `x3` is a discrete variable, taking on the values 1, 2, and 3.
+```{r, eval = F}
+# look at the values of x3
+table(pop[, x3])
+```
+If we want to look at a sub-dataset that consists of only those rows for which `x3 == 3`, we can simply use
+```{r, eval = F}
+# extract rows for which x3 == 3
+pop[x3 == 3, ]
+
+# you can also use
+pop[x3 == 3]
+```
+If you want to extract the variable `x1` for only those rows for which `x3` is equal to 3, you can do 
+```{r, eval = F}
+pop[x3 == 2, x1]
+```
+and further, you can use this to calculate some statistics, such as the mean:
+```{r, eval = F}
+mean(pop[x3 == 2, x1])
+```
+
+We will practice subsetting and using `data.table` objects more generally through out the labs. For now, let us move on.
+
+> **EXERCISE** 
+>
+> 1. What is the element in the 200th row and 2nd column of the `pop` object?
+> 2. Try the following code: `mean(pop[x3 == 2, "x1"])`. Try to "guess" why it throws an error. (Hint: recall that `mean(pop[x3 == 2, x1])` worked just fine.)
+
+<br> 
+
+# Taking a Random Sample from a Population
+
+Assume the dataset I've provided you with is the *population* we want to make inference to. Usually we won't observe the population but only a sample from it. So, let us generate a random sample of size `n = 500` from the population. There are many ways to generate random samples in R. Here, I'll show you how to do it by sampling random integers using the `sample` function.
+
+## Setting a Random Seed
+
+The first thing to keep in mind is the following: whenever you do something in R that involves something *random*, such as sampling or generating random variates from some distributions, it is important that you set a **random seed**. A random seed is a integer number that ensures that your results will be reproducible. Nothing what you do in R is truly random. The random numbers you generate are just behaving *as if* they were random; they are all produced by algorithms that are deterministic. This is also why random number generators are often called *pseudo*-random number generators. By setting a random seed, we can assure that we'll get exactly the same results when the code is run a second time. 
+
+To see how this works, let us draw a random integer between 1 and 10. With the `sample` function, we can do this as follows
+
+```{r, eval = F}
+sample(1:10, size = 1, replace = FALSE)
+```
+This will draw `size = 1` random number(s) from the sequence `1:10` without replacement (here, because we are drawing only one number sampling with/without replacement is actually irrelevant).
+
+Now, try running the same code again:
+```{r, eval = F}
+sample(1:10, size = 1, replace = FALSE)
+```
+With probability 0.1, you'll get a different number. Try it many times to check whether this is indeed true.
+
+Now, try to run the following code:
+```{r, eval = F}
+# set random seed
+set.seed(1984)
+# sample integer
+sample(1:10, size = 1, replace = FALSE)
+
+# repeat the steps 
+set.seed(1984)
+sample(1:10, size = 1, replace = FALSE)
+
+# repeat again
+set.seed(1984)
+sample(1:10, size = 1, replace = FALSE)
+```
+You'll see that you get exactly the same integers. By specifying `set.seed(some_number)` we can, therefore, make random simulations reproducible.
+
+>**NOTE** To make the results *exactly* reproducible, other conditions have to be met as well, such as the operating system, the random number generator that was used, the R version, and so on. We won't go too deep into this. Just keep the following in mind: if you want to help others (which you should) reproduce your analyses, it is helpful to provide your `sessionInfo()` in the replication package. It will tell others most of the necessary information to exactly replicate your results. Also, if you have used any kind of simulations, it is important that you set a random seed and provide readers with the seed number you've used.
+
+
+## Excurse on `for loops`
+
+But are the numbers generated by the `sample` function indeed behaving as if they were random draws? We could examine this question by trying the `sample` function many, many times. As `sample(1:10, size = 1, replace = FALSE)` draws a integer from 10 possible ones at random, we should expect that each integer from `1` to `10` should be drawn approximately `1/10` of the times. But how can we test this?
+
+Below is a code that achieves this goal:
+
+```{r, eval = F}
+# set number of simulation draws
+n_sim = 5000
+
+# generate empty vector to store random numbers we draw
+res = integer(n_sim)
+
+# generate n_sim random numbers between 1 and 10
+for (i in 1:n_sim) {
+    
+    res[i] = sample(1:10, size = 1, replace = FALSE)
+    
+}
+```
+
+We have encountered something new here: namely a `for loop`. Differenty from languages in which the code is compiled before execution (such as `C/C++`) using loops in R is generally slow and not recommended. Intuitively, this is because R will interpret the code anew for every iteration of the loop; if you create new objects within a loop R has to find a slot in your laptops memory where it can be stored, and this at every iteration. This makes the loops quite expensive.
+
+But it is still loops are indispensible tools that you need to know to use R efficiently, since there are circumstances where loops are hard to avoid. Whenever you can, you should use vectorized code (we will talk about this later), but first let us learn how to code a loop in R (which is much easier).
+
+The `for loop` has the following structure
+
+``` 
+for (i in vector) {
+
+    statement1
+    statement2
+    ...
+
+}
+```
+
+In the first line, `for (i in vector) {`, we open the loop by specifying the object `i` as a *iterator* throughout the loop. The iterator will iterate through the `vector` that is given after the `in` part of the statement. In the sampling code, the `vector` to iterate through is `1:n_sim`, i.e., the sequence of numbers `1, 2, ..., n_sim`. In every iteration, the iterator `i` is replaced by the next object in the `vector`. For the sampling code, in the first iteration `i` will be set to `1`, in the second iteration `i` is set to 2, until it reaches the last iteration of `n_sim`. Thus, when `i = 1`, the code for loop will be interpreted as
+```
+res[1] = sample(1:10, size = 1, replace = FALSE)
+```
+when `i = 12`, it will be interpreted as
+```
+res[12] = sample(1:10, size = 1, replace = FALSE)
+```
+and so on. Thus, if we run the sampling code, it will draw a random number between 1 and 10 at each iteration, and store the resulting number in the `i`th row of the `res` vector.
+
+Notice that you can use for loops to iterate through other kind of vectors, which are not necessarily integers. For example, you could do something like the following:
+```{r, eval = F}
+# some random string vector
+s_vec = c("hello", "world", "!!", "Why", "would", "you", "ever", "...")
+
+# use a for-loop to print each element of s_vec
+for (v in s_vec) {
+    print(v)
+}
+```
+This example makes also clear that the name of the iterator is immaterial. You can name it `i` or `v` or even `intro_to_stats`; any name that comes before `in` will be treated as the iterator. Notice also that in the last iteration of the for loop `"..."` will be substituted into the iterator, `v`. So, if you type the following:
+```{r eval = F}
+v
+```
+you'll see that `v` still contains the string `"..."`.
+
+It is also possible to reassign values within a loop. For example, you can concatenate the elements in s_vec into one character by writing a for loop as follows:
+```{r, eval = F}
+# create a character object containing the first element of s_vec
+one_string = s_vec[1]
+
+# repeatedly paste the rest of the values in s_vec to one_string
+for (v in s_vec[2:length(s_vec)]) {
+    one_string = paste(one_string, v)
+}
+```
+`s_vec[2:length(s_vec)]` will extract all elements of `s_vec` except for the first element. So, for each iteration of the loop, the `v` object will be, in turn, `"world"`, then `"!!"`, and so on, up to `"..."`. 
+
+Suppose that the current value `one_string` is `"hello world"` and that of `v` is `"!!"`. Then, `one_String = paste(one_string, v)` will first evaluate the right-hand side, namely pasting together `"hello world"` and `"!!"` with a whitespace between them (recall that the default `sep` option is `" "`), and then assign it to `one_string` again. Thus, after the iteration `one_string` will evaluate as `"hello world !!"`.
+
+Of course, we know already that we can do the same operation much simpler and much faster by just using
+```{r, eval = F}
+one_string = paste(s_vec)
+```
+
+> **EXERCISE** Create a vector `v` which contains the following values
+>
+> $$\mathbf v = [1,2,3,4,5,6]$$
+>
+> Then, 
+>
+> 1. Using a `for loop`, calculate the sum of the elements in `v`. Store the results in the object `s`.
+> 2. Calculate the mean of the numbers in `v` by dividing `s` by the length of `v`.
+
+## Vectorized Use of the `sample` Function
+
+Okay, let's get back to checking whether the `sample` function generates indeed good-as-random integers from the sequence `1:10`. We might check the `res` object using the `table` function:
+```{r, eval = F}
+table(res)
+```
+This shows us the frequeny of each integer. Also, we know that if it were true that the integers are randomly sampled, each integer will have a probability of 0.1 of being sampled. So, rather than the raw frequencies, the relative frequencies (or proportions) of each integer might be more informative. To obtain the relative frequencies we can just divide every element of the table by the number of simulations we have run:
+```{r eval = F}
+table(res) / n_sim
+```
+Most of the entries should be quite close to 0.1 (you will learn in a few weeks that the reason for this is due to the Law of Large Numbers). 
+
+Before going to generating a sampling from our population `pop`, let me return to the argument that for loops are relatively slow in R. Then what should we do instead, one might ask. The answer is to sample not one integer at a time, but use a code that samples `n_sim` samples in one rush. As we are operating not unit by unit, but creating a whole vector at once, this is sometimes referred to as *vectorized* code. 
+
+Fortunately, creating a vector of random integers is quite easy with the `sample` function. We just need to specify the `size` option to be greater than one:
+```{r, eval = F}
+res_vec = sample(1:10, size = n_sim, replace = TRUE)
+```
+Notice that we have specified the `replace` option to `TRUE`, since we want to be able to sample the same integers several times. Again, we might check the results:
+```{r, eval = F}
+table(res_vec) / n_sim
+```
+
+## Drawing a Random Sample
+
+With this, we are ready to draw a random sample from our population `pop`. So, here is how it works. 
+
+- Our population `pop` has a total of `N` rows (representing individuals) and `K` columns (representing characteristics of these individuals or, simply, variables). 
+- Drawing a sample of size `n = 500` from this population at random means that we select, at random, a subset of `n` rows from the dataset. 
+- We know that we can subset a dataset by vector. For example, if `v = c(1, 3)`, then `pop[v, ]` will extract the first and the third row of `pop` for us. 
+- Thus, if we create a vector of `n` randomly sampled integers from the sequence `1:N`, and subset `pop` by this vector, we will be able to generate a random sample of size `n` from our population `pop`. 
+
+Simple, huh? Do it :)
+
+> **EXERCISE** Draw a random sample of size `n = 500` from the population `pop`.
+> 
+> 1. Set the random seed to `251204`
+> 2. Use the `sample` function to draw `n` random integers from the sequence `1:N`
+>     + Do not use for loops!
+>     + Think carefully about whether the `replace` option should be set to `TRUE` or `FALSE`.
+> 3. Subset the `pop` dataset by this vector to obtain a random sample.
+> 4. Store the sample under the name `samp`.
+> 5. Check that `samp` is a `data.table` object.
+> 6. Check that `samp` has indeed `n = 500` rows.
+> 7. Check that `samp` has the same number of columns as `pop`.
+
+```{r, eval = T, echo = F}
+# sample size
+n = 500
+
+# sample n = 500 integers from {1,2,...,nrow(pop)} without replacement
+# and where each integer has an equal probability to be sampled
+which_samp = sample(1:nrow(pop), n, replace = FALSE)
+
+# # have a look into the first few sampled integers
+# head(which_samp)
+
+# subset the dataset with these integers
+samp = pop[which_samp, ]
+```
+
+<br>
+
+# Descriptive Statistics
+
+From now on, we will work with the sample `samp`. First, we can calculate some descriptive statistics. If you use the `summary` function on a dataset, it will give you some summary statistics for each variable:
+```{r, eval = F}
+summary(samp)
+```
+When the dataset has many columns, this is not very efficient. Instead, it is often more useful to examine each of the columns separately:
+```{r, eval = F}
+summary(samp$x1)
+summary(samp$x2)
+summary(samp$x3)
+```
+Notice that the min, max, the quartiles, and the median for `x3` are integer values. This suggests that this variable is a discrete variable. We can check this by using
+```{r, eval = F}
+# number of unique values in x1
+length(unique(samp$x1))
+
+# number of unique values in x3
+length(unique(samp$x3))
+```
+You can also examine the mean, median, variance, and standard deviation of a variable with the `mean`, `median`, `var`, and `sd` functions, respectively:
+```{r, eval = F}
+# mean of x1
+mean(samp$x1)
+
+# median of x1
+median(samp$x1)
+
+# variance of x1
+var(samp$x1)
+
+# standard deviation of x1
+sd(samp$x1)
+```
+
+Notice that these oprations, say `sd(samp$x1)`, first extract the column `x1` as a vector from the `samp` data and then apply the `sd` function on that vector. As `samp` is a `data.table` object, we can also use `data.table` specific operations:
+
+```{r, eval = F}
+# mean of x1
+samp[, mean(x1)]
+```
+This expression needs some extra explanations. All `data.table` expressions have the following form:
+```r
+data[i, j, options]
+```
+The `i` place is used to subset rows, similar to matrices or other two-dimensional R objects. The `j` place is very flexible in `data.table`. As you have already seen above, it's not only used to subset datasets but also to apply functions to variables (indeed, we can use the `j` argument to apply function to multiple, rather than just one, column simultaneously; more on this later in the course). Lastly, the third argument `options` is there to specify other options. You'll most often use the `by  = variable` option, will apply the function specified in `j` for all levels of the variable `variable`.
+
+For example, in 
+```r
+samp[, mean(x1)]
+```
+the first and the third argument is left unspecified. This means that we want to calculate the mean of `x1` for all rows. On the other hand,
+```{r, eval = F}
+# mean of x1 for each level of x3
+samp[, mean(x1), by = x3]
+```
+will calculate the mean of `x1` for each unique value of the `x3` variable (recall that `x3` is a discrete random variable, so this makes sense; if you would have specified `by = x2`, you'd get a very long `data.table` back). We might also mix all three arguments together
+```{r, eval = F}
+# mean of x1 for each level of x3 and only for those rows of samp 
+# that satisfy x1 > x2
+samp[x1 > x2, mean(x1), by = x3]
+```
+Next, we can look at the covariance and correlation of two variables as follows:
+```{r, eval = F}
+# calculate the covariance of x1 and x2
+samp[, cov(x1, x2)]
+# equivalently
+cov(samp$x1, samp$x2)
+
+# calculate the correlation between x1 and x2
+samp[, cor(x1, x2)]
+# equivalently
+cor(samp$x1, samp$x2)
+```
+
+For the discrete variable `x3`, on the other hand, it makes more sense to look into the frequency table
+```{r, eval = F}
+# frequency table of x3
+samp[, table(x3)]
+
+# divide by sample size to get proportions
+samp[, table(x3)] / n 
+```
+
+<br>
+
+
+# Basic Plots in R using `ggplot`
+
+There are two "main" ways to generate plots in R. 
+
+1. R itself comes with a very powerful set of functions to create high quality graphics.
+2. The `ggplot2` package is gaining increasing popularity (it might be already more popular than the ordinary R plotting functinoality)
+
+Here, we will use mainly `ggplot2`, but we'll keep in mind that for some graphs, the basic R plotting functions are more convenient. 
+
+First, let us install the package
+```{r eval = F}
+install.packages("ggplot2", dependencies = T)
+```
+and then load it
+```{r eval = T, message = F}
+library("ggplot2")
+```
+
+## Histograms
+
+The synatx to use the `ggplot` package is quite intuitive. Let us plot a histogram of `x1`. The most basic structure of the code looks like follows:
+```{r}
+ggplot(samp, aes(x = x1)) + # specification of data
+    geom_histogram()        # add histogram geometric object (geom)
+```
+The first argument to `ggplot` is always the data. Thereafter we specify the aestetic mapping with `aes`. To plot a histogram we need to only specify which variable should be plotted on the x-axis, which is `x1`. Latter we will also need to specify what variable should be plotted on the y-axis. Lastly, we add a `geom`, which specifies the kind of plot we want. `geom_histogram` stands for a histogram.
+
+There are a lot(!) of ways to customize a `ggplot` object. For example, we can add axis labels and change the number of bins in the histogram by specifying (I'll add comments to only those parts that are new)
+```{r}
+ggplot(samp, aes(x = x1)) +
+    geom_histogram(bins = 40) + # specify no. of bins
+    labs(                       # add axis labels
+        x = "Variable X1", 
+        y = "Frequency"
+    )
+```
+or change the border color of the bars
+```{r}
+ggplot(samp, aes(x = x1)) +
+    geom_histogram(
+        bins = 40,     # number of bins
+        col = "white"  # border color of bars
+    ) +
+    labs(
+        x = "Variable X1", 
+        y = "Frequency"
+    )
+```
+To change the filling color of the bars, we use the `fill` option. Also, by specifying a value for `alpha` (between zero and one) we can control the transparency of the colors:
+```{r}
+ggplot(samp, aes(x = x1)) +
+    geom_histogram(
+        bins = 40, 
+        col = "white", 
+        fill = "darkmagenta",  # filling color of bars
+        alpha = .8             # transparency of colors
+    ) +
+    labs(
+        x = "Variable X1", 
+        y = "Frequency"
+    )
+```
+Lastly, we might change the theme of the whole plot and :
+```{r}
+ggplot(samp, aes(x = x1)) +
+    geom_histogram(
+        bins = 40, 
+        col = "white", 
+        fill = "darkmagenta", 
+        alpha = .8
+    ) +
+    labs(
+        x = "Variable X1", 
+        y = "Frequency"
+    ) +
+    theme_bw()      # black-white theme
+```
+
+
+## Bar Plots
+
+Now, if you run the same command with `x3`, which is a discrete variable, you'll get something like the following:
+```{r}
+ggplot(samp, aes(x = x3)) +
+    geom_histogram(
+        bins = 40, 
+        col = "white", 
+        fill = "darkmagenta", 
+        alpha = .8
+    ) +
+    labs(
+        x = "Variable X1", 
+        y = "Frequency"
+    ) +
+    theme_bw()
+```
+This is because histograms are designed for continuous variables. For discrete variables, what you want is a bar-plot. In `ggplot` you can generate a barplot by using `geom_bar()`:
+```{r}
+ggplot(samp, aes(x = x3)) +
+    geom_bar(                 # bar plot geom
+        col = "white", 
+        fill = "darkmagenta", 
+        alpha = .8
+    ) +
+    labs(
+        x = "Variable X1", 
+        y = "Frequency"
+    ) +
+    theme_bw()
+```
+
+## Scatter Plots
+
+When you are examining the relationship between two variables, one of the first plots you want to look at is a **scatter plot**. Again, the syntax is very similar to the previous ones except that we are specifying two variables in the aesthetic mapping (`aes`, one for the x-axis and one for the y-axis) and that we use `geom_point()`:
+
+```{r}
+ggplot(samp, aes(x = x1, y = x2)) +
+    geom_point(col = "darkmagenta") + # scatter plot
+    labs(
+        x = "Variable X1", 
+        y = "Variable X2"
+    ) +
+    theme_bw()
+```
+
+We can also add vertical and horizontal lines to this plot to emphasize certain values of `x1` and `x2`. For example, let us add a vertical and horizontal line at `x2` and `x1`'s mean value, respectively. This is done by adding the `geom_vline` (for vertical lines) and the `geom_hline` (for horizontal lines) geoms:
+
+```{r}
+ggplot(samp, aes(x = x1, y = x2)) +
+    geom_point(col = "darkmagenta") +
+    geom_vline(xintercept = mean(samp$x1)) + # vertical line
+    geom_hline(yintercept = mean(samp$x2)) + # horizontal line
+    labs(
+        x = "Variable X1", 
+        y = "Variable X2"
+    ) +
+    theme_bw()
+```
+Notice that the vertical lines appear *in front of* the points. This is because we have specified the `geom_vline` and `geom_hline` functions *after* `geom_point`. Reversing the order solves this problem. Also, let us change the linetypes of these lines to dashed lines:
+
+```{r}
+# adding vertical and hoziontal lines first to push them into the background
+ggplot(samp, aes(x = x1, y = x2)) +
+    geom_vline(xintercept = mean(samp$x1), linetype = "dashed") + 
+    geom_hline(yintercept = mean(samp$x2), linetype = "dashed") + 
+    geom_point(col = "darkmagenta") +
+    labs(
+        x = "Variable X1", 
+        y = "Variable X2"
+    ) +
+    theme_bw()
+```
+
+Lastly, let us incorporate the information of the variable `x3` into the plot by using different colors for points with different `x3` values. To do so, we have to add `x3` into the aesthetic mapping as follows (we also have to drop the color option in the `geom_point` function to let the `aes` argument govern the whole plot):
+```{r, fig.width = 7}
+# add col specification in aes
+ggplot(samp, aes(x = x1, y = x2, col = as.character(x3))) +
+    geom_vline(xintercept = mean(samp$x1), linetype = "dashed") + 
+    geom_hline(yintercept = mean(samp$x2), linetype = "dashed") + 
+    geom_point() +
+    labs(
+        x = "Variable X1", 
+        y = "Variable X2"
+    ) +
+    theme_bw()
+```
+
+The reason we have turned `x3` into a character vector using the `as.character` function is because, otherwise, `ggplot` will treat `x3` as a continuous variable, rather than a discrete one. You'll learn later about `factor` variable, which are usually used for this purpose.
+
+## Jitter Plots and Box Plots
+
+When plotting two variables where one of them is continuous and the other is discrete, it is often useful to create **box plots**. Consider, for example, variables `x1` (continuous) and `x3` (discrete). A scatterplot of these variables would look as 
+
+```{r}
+ggplot(samp, aes(x = x1, y = as.character(x3))) +
+    geom_point(col = "darkmagenta") +
+    labs(x = "X1 (Continuous)", y = "X3 (Discrete)") +
+    theme_bw()
+```
+
+This plot is not very informative as many of the points will be placed on top of each other. So, it is hard to see the shape of the (conditional) distribution of `x1` for each value of `x3`. A better way to show the data is to use **jitter plots**. These plots add a little amount of random noise to each point, with the effect of pushing apart (by a little amount) points that are located on the same spot:
+```{r}
+ggplot(samp, aes(x = x1, y = as.character(x3))) +
+    geom_jitter(col = "darkmagenta", alpha = .6) +   # jitter plot
+    labs(x = "X1 (Continuous)", y = "X3 (Discrete)") +
+    theme_bw()
+```
+Ironically, by adding noise to the data, we can see the distribution of the data more clearly. 
+
+Still another way to plot a continuous and discrete variable is to create a boxplot for each value of the discrete variable. You can do this as follows:
+
+```{r}
+ggplot(samp, aes(x = as.character(x3), y = x1)) +
+    geom_boxplot(fill = "darkmagenta") + # box plot geom
+    labs(
+        x = "X3 (Discrete)", 
+        y = "X1 (Continuous)"
+    ) +
+    theme_bw()
+```
+Notice that we put `x3` on the on the x-axis and `x1` on the y-axis, which is the opposite from the previous plot. We can switch back to the original axes by using the `coord_flip()` function and suppress the drawing of outliers by setting the `outlier.shape` to `NA` (this is not recommended, unless you add the outliers back in by overlaying another plot or so as we will do shortly).
+```{r}
+ggplot(samp, aes(x = as.character(x3), y = x1)) +
+    geom_boxplot(
+        fill = "darkmagenta", 
+        size = .75,
+        outlier.shape = NA    # don't show outliers
+    ) +
+    labs(
+        x = "X3 (Discrete)", 
+        y = "X1 (Continuous)"
+    ) +
+    coord_flip() +            # flip position of x- and y-axis
+    theme_bw()
+```
+The `size` option here specifies the width of the border-lines of the boxplot. 
+
+Lastly, we can also add the jitter plot to the box plot (sometimes this is helpful, at other times this adds only clutter.) If we want to emphasize the boxplot, it is important to add the jitter plot first (so it's drawn first and therefore in the background) and to use a low alpha level (high transparency) to make the boxes clearly visible. Overlaying a boxplot over a jitter plot is often useful when the sample size is not too large or when the (conditional) distribution of `x1` for each level of `x3` is very different from a bell-shaped one. 
+```{r}
+ggplot(samp, aes(x = as.character(x3), y = x1)) +
+    geom_jitter(
+        col = "grey50",
+        alpha = .5,
+        width = .25
+    ) + 
+    geom_boxplot(
+        fill = "darkmagenta", 
+        size = .75,
+        alpha = .6,
+        outlier.shape = NA
+    ) +
+    labs(
+        x = "X3 (Discrete)", 
+        y = "X1 (Continuous)"
+    ) +
+    coord_flip() + 
+    theme_bw()
+```
+
+
+There are a lot of options you can specify in `ggplot`. In fact, there is a whole book on producing graphics with the `ggplot2` package. (You can find a cheatsheet [here](https://github.com/rstudio/cheatsheets/blob/master/data-visualization-2.1.pdf).) Most of the time, regardless of what kind of plot you want to draw, there will be a way to do so with the `ggplot` package. The fastest way to find the code to draw these plots is often to google :)
+
+>**EXERCISE** Ask Google how to generate a violin plot using the ggplot2 package. Substitute the boxplot geom with a violin plot geom in the last plot we've created.
+
+
+## Saving plots in R
+
+Recall that every thing in R is an object. So the plots we created are objects as well. For example, we can asssign the last plot to the object `my_plot`.
+```{r}
+my_plot = ggplot(samp, aes(x = x1, y = x2, col = as.character(x3))) +
+    geom_vline(xintercept = mean(samp$x1), linetype = "dashed") + 
+    geom_hline(yintercept = mean(samp$x2), linetype = "dashed") + 
+    geom_point() +
+    labs(
+        x = "Variable X1", 
+        y = "Variable X2"
+    ) +
+    theme_bw()
+```
+To see the plot, you can use the `print` function (the plot will also show up, if you type in the object name and nothing else, but under certain circumstances you'll need to use the `print` function. For now, I would recommend you just use `print` all the time.)
+```{r, fig.width = 7}
+print(my_plot)
+```
+To save a plot to a file, you can use the `pdf` function. 
+```{r eval = F}
+pdf(here("Lab1", "my_plot.pdf"), width = 5, height = 4)
+print(my_plot)
+dev.off()
+```
+The first argument in the `pdf` function is the file name under which you want to save the plot (including the full path). In our example, the file will be saved in `path_to_your_working_directory/Lab1/my_plot.pdf`. Thereafter, we specify the width and the height of the plot. The default units in the `pdf` function are inches. The `dev.off()` will close the graphics device, thereby saving the plot. You could also add multiple plots by putting multiple plots between the `pdf()` and `dev.off()` functions. You can look into the documentation of these functions (`?pdf` and `?dev.off`) to get the details.  
+
+> **EXERCISE** 
+> 
+> 1. using the `samp` sample, generate a boxplot of `x1`
+> 3. Save the plot into your the `Lab1` subdirectory under the title `boxplot1.pdf`.
+> 3. what does the plot tell you?
+> 4. Repeat the same steps above for the variable `x2`.
+> 5. how does the box plot for `x1` differ from that of `x2`? How do the distributions of `x1` and `x2` differ?
+> 1. Repeat the steps above, but this time plot violin plots instead of box plots. 
+> 6. What do these plots tell you about the relationship between `x1` and `x2`?
+
+<br>
+
+# Populations, Samples, and Sampling Distributions
+
+Before we call it a day, let me shortly demonstrate, by simulation, the concept of a sampling distribution.
+
+First, let us have a look at the population distribution of `x1`, where I mark the mean of the distribution with a vertical line. Also, I add a title to the plot with the `ggtitle` function:
+```{r}
+pop_dist = ggplot(pop, aes(x = x1)) + 
+    geom_histogram( 
+        bins = 100, 
+        col = "white", 
+        alpha = .6) +  
+    geom_vline(xintercept = mean(pop$x1)) + 
+    labs(y = "Frequency", x = "") + 
+    lims(x = c(-1.25, 3.25)) +                 # spec. axis limits
+    ggtitle("Population Distribution of X1") + # add title
+    theme_bw() 
+```
+
+Let us save the value of the population mean into the object `mu`:
+```{r, eval = T, echo = T, results = "hide"}
+# store the population mean
+mu = mean(pop$x1)
+
+# but also print its value
+print(mu)
+```
+In this setup, there is only **one** population, which has (not surprisingly) **one** mean. Now, let us take a sample of size `n = 20` from this population (only for `x1`) and calculate the mean of the sample:
+```{r eval = F}
+# sample size
+n_samps = 20
+
+# generate sample
+s = pop[sample(1:N, n_samps, replace = F), x1]
+
+# calculate the mean
+mean(s)
+```
+Clearly the sample mean is different from the population mean. But, suppose we repeat this step multiple times: that is, we draw a sample of the same size, using the same random sampling procedure, and for each iteration, we calculate the sample mean and store it. If we repeat this procedure `n_rep` times, this will give us `n_rep` sample means, each of which will be a little bit different from others due to random variation (sometimes called sampling variation). This suggests that the means will have a *distribution* (over repeated samples). It is this distribution that is called the **sampling distribution of the sample mean**.
+
+But what does the sampling distribution look like? As we are sitting in front of our computers, we can just simulate it:
+
+```{r}
+# number of times to sample
+n_rep = 5000
+
+# create empty vector to store results
+m_res = numeric(length = n_rep)
+
+# sample size (notice that the sample size is the same for each iteration)
+samp_size = 20
+
+# start loop to sample repeatedly
+for (i in 1:n_rep) {
+    
+    # sample from population   
+    s = pop[sample(1:N, samp_size, replace = F), x1]
+    
+    # store the mean
+    m_res[i] = mean(s)
+    
+}
+
+# plot the sampling distribution of the mean
+# note: the ggplot function only accepts data.frames/data.tables as input
+#       so we have to convert vector m_res into a data.table or data.frame
+samp_dist = ggplot(data.table(means = m_res), aes(x = means)) + 
+    geom_histogram( # histogram
+        bins = 50, 
+        col = "white",
+        fill = "darkmagenta",
+        alpha = .6
+    ) + 
+    geom_vline(xintercept = mu) + 
+    labs(y = "Frequency", x = "") + 
+    lims(x = c(-1.25, 3.25)) + 
+    ggtitle("Sampling Distribution of Sample Mean (n = 20)") + 
+    theme_bw() 
+
+# show plot
+print(samp_dist)
+```
+
+We observe that the distribution of the sample mean is centered around the population mean! We can also show this by combining the plots together using the `plot_grid` function of the `cowplot` package:
+
+```{r, eval = F}
+install.packages("cowplot", dependencies = T)
+```
+```{r, fig.height = 6}
+# combine plots in one column and align plotting region vertically
+# note: notice that we have made sure that the limits of the x-axis
+#       in both plots are exactly the same. Thus, by vertically 
+#       aligning the plotting areas, we are in effect also aliging
+#       the x-axis scales of both plots
+cowplot::plot_grid(pop_dist, samp_dist, ncol = 1, align = "v")
+```
+Here, again, we see something new. Rather than "loading" the whole package using the `library` function, we used the `::` operator to call a function that is included in the `cowplot` package without "loading" the package itself. This is often convenient if you need only a single function from a package, or when several packages that you use have functions with the same name (`package_name::function_name` will make the function you want to use unambiguous).
+
+Now, with respect to the results, notice that the distribution of the population and the sampling distribution of the sample mean look really different: while the population has three "bumps" in its distribution, the sampling distribution of the mean has only a single peak and is approximately bell-curved. Also,  compared to the population size of `N = 50,000`, a sample size of `n = 20` is really small. Intuitively, when you sample only twenty units from a population, it seems to be quite likely a sample might be drawn from the extremes of the population distribution (e.g., all sampled units might come from the left-most "bump" of the population distribution). But even after 5,000 runs of the simulations, we have not encountered such a scenario. Indeed, all of the sample means are quite close to the population mean. You will learn, over the next couple of weeks, that this is not a coincidence.
