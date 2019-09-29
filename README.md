@@ -15,5 +15,6 @@ descriptives, ggplot, sampling distribution of the mean
 
 # Assignments
 
-1. Basic mean and variance calculations, some combinatorics, 
-exercises in plotting via ggplot, a small simulation exercise
+1. Rstudio projects, `data.table` objects, working directories, subsetting, descriptive statistics, ggplot, sampling distributions
+2. Basic Debugging, Standard Errors and Confidence Intervals, Central Limit Theorem, Population as a DGP, Unbiasedness and Consistency
+3. Recoding and Saving Data, One-sample and Two-sample t-tests, Crosstables and Pearson's Chi-squared Tests
