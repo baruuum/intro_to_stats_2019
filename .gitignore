@@ -1,0 +1,48 @@
+# ignore everything
+*
+
+# but not the following files 
+!.gitignore
+!README.md
+
+## sequentially update files ------------------------
+
+# math refresher
+!math_refresher/
+!math_refresher/day1_LaTex/
+!math_refresher/day1_LaTeX/*
+!math_refresher/day2_R/
+!math_refresher/day2_R/*
+!math_refresher/day3_Rmarkdown/
+!math_refresher/day3_Rmarkdown/*
+!math_refresher/problems/
+!math_refresher/problems/*
+
+# Labs ----------------------------------------------
+
+# Lab1
+!Lab1/
+!Lab1/simdat.csv
+!Lab1/Lab1.html
+!Lab1/Lab1.Rmd
+
+# lab2
+!Lab2/
+!Lab2/Lab2.Rmd
+!Lab2/Lab2.html
+
+# lab3
+!Lab3/
+!Lab3/Lab3.Rmd
+!Lab3/Lab3.html
+
+
+## Assignments --------------------------------------
+
+# assignments directory
+!assignments/
+
+# assignment1
+!assignments/assignment1/
+!assignments/assignment1/assignment1.pdf
+.Rproj.user
