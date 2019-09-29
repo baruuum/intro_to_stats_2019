@@ -399,13 +399,12 @@ summary {
 
 <h1 class="title toc-ignore">Lab3 - t and chi-squared tests</h1>
 <h4 class="author">Barum Park</h4>
-<h4 class="date">9/20/2019</h4>
+<h4 class="date">9/27/2019</h4>
 
 </div>
 
 <div id="TOC">
 <ul>
-<li><a href="#downloading-data">Downloading data</a></li>
 <li><a href="#raw-data">Raw Data</a></li>
 <li><a href="#creating-directories-from-r-and-saving-your-data">Creating Directories from R and Saving Your Data</a></li>
 <li><a href="#missing-values-recoding-variables">Missing Values, Recoding Variables</a></li>
@@ -452,11 +451,7 @@ h3 { font-size: 20px; }
 
 </style>
 <p><br></p>
-<p>This lab will be, I hope, very short, since we’ll discuss some of the materials of the last lab and also the solutions to your first assignments. I’ll go a little bit more into the details of testing hypotheses regarding a population mean compared to the other materials. This is not because it is the most important case, but rather because it is the simplest case (and I believe we have already covered all the necessary materials).</p>
-<p>By the way, I you all did very well on the assignment :)</p>
-<p><br></p>
-<div id="downloading-data" class="section level1">
-<h1>Downloading data</h1>
+<p>This lab will be, I hope, very short, since we’ll discuss some of the materials of the last lab and also the solutions to your first assignments. I’ll go a little bit more into the details of testing hypotheses regarding a population mean compared to the other materials. This is not because it is the most important case, but rather because it is the simplest case (and I believe we have already covered all the necessary materials). By the way, I you all did very well on the assignment :)</p>
 <p>This will be the first lab in which we use real-world, rather than simulated, data. For your repliation project, you’ll use the American Community Survey (ACS). In this lab, however, we’ll use the General Social Survey (GSS).</p>
 <ol style="list-style-type: decimal">
 <li>To download the GSS, we go to the <a href="https://gss.norc.org/">GSS website</a> and click on “Get the Data”.</li>
@@ -473,14 +468,13 @@ h3 { font-size: 20px; }
 </ol>
 <p>This codebook will be quite large, but we will have to work through it.</p>
 <p><br></p>
-</div>
 <div id="raw-data" class="section level1">
 <h1>Raw Data</h1>
 <p>Now, here is an <strong>important rule</strong> when working with datasets:</p>
 <blockquote>
-<p><strong>RULE</strong> Never change the raw-data. NEVER.</p>
+<p><strong>RULE</strong> Never change the raw data. NEVER.</p>
 </blockquote>
-<p>You might ask: “but then, how do I save my work?” If you write your code in a script (as we do here), you can just save the script. Running the script will bring you exactly to the point in your analysis where you are right now, given that <strong>you have not changed the raw-data</strong>. If you did something wrong in your script, you can change your script to get the right results. If you have changed the raw-data, on the other hand, there might be no way to go back to your original dataset from which you started (unless the manipulations you did on the raw data can be reverse-engineered.)</p>
+<p>You might ask: “but then, how do I save my work?” If you write your code in a script (as we do here), you can just save the script. Running the script will bring you exactly to the point in your analysis where you are right now, given that <strong>you have not changed the raw data</strong>. If you did something wrong in your script, you can change your script to get the right results. If you have changed the raw-data, on the other hand, there might be no way to go back to your original dataset from which you started (unless the manipulations you did on the raw data can be reverse-engineered.)</p>
 <p>Of course, running your whole script every time can become a time-consuming task, expecially if your script gets too long or when the dataset itself is very large. In these circumstances, you want to save your modified data under <strong>a different name</strong> and preferably in a different directory. Anyways, the important point is that you should <strong>never overwrite your original dataset</strong>.</p>
 <p>Here is what I usually do for any data analysis:</p>
 <blockquote>

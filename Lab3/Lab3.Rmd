@@ -1,7 +1,7 @@
 ---
 title: "Lab3 - t and chi-squared tests"
 author: "Barum Park"
-date: "9/20/2019"
+date: "9/27/2019"
 output: 
     html_document:
         keep_md: false
@@ -50,13 +50,7 @@ knitr::opts_chunk$set(echo = TRUE,
                       letina = TRUE)
 ```
 
-This lab will be, I hope, very short, since we'll discuss some of the materials of the last lab and also the solutions to your first assignments. I'll go a little bit more into the details of testing hypotheses regarding a population mean compared to the other materials. This is not because it is the most important case, but rather because it is the simplest case (and I believe we have already covered all the necessary materials).
-
-By the way, I you all did very well on the assignment :)
-
-<br> 
-
-# Downloading data
+This lab will be, I hope, very short, since we'll discuss some of the materials of the last lab and also the solutions to your first assignments. I'll go a little bit more into the details of testing hypotheses regarding a population mean compared to the other materials. This is not because it is the most important case, but rather because it is the simplest case (and I believe we have already covered all the necessary materials). By the way, I you all did very well on the assignment :)
 
 This will be the first lab in which we use real-world, rather than simulated, data. For your repliation project, you'll use the American Community Survey (ACS). In this lab, however, we'll use the General Social Survey (GSS).
 
@@ -81,9 +75,9 @@ This codebook will be quite large, but we will have to work through it.
 
 Now, here is an **important rule** when working with datasets:
 
-> **RULE** Never change the raw-data. NEVER.
+> **RULE** Never change the raw data. NEVER.
 
-You might ask: "but then, how do I save my work?" If you write your code in a script (as we do here), you can just save the script. Running the script will bring you exactly to the point in your analysis where you are right now, given that **you have not changed the raw-data**. If you did something wrong in your script, you can change your script to get the right results. If you have changed the raw-data, on the other hand, there might be no way to go back to your original dataset from which you started (unless the manipulations you did on the raw data can be reverse-engineered.)
+You might ask: "but then, how do I save my work?" If you write your code in a script (as we do here), you can just save the script. Running the script will bring you exactly to the point in your analysis where you are right now, given that **you have not changed the raw data**. If you did something wrong in your script, you can change your script to get the right results. If you have changed the raw-data, on the other hand, there might be no way to go back to your original dataset from which you started (unless the manipulations you did on the raw data can be reverse-engineered.)
 
 Of course, running your whole script every time can become a  time-consuming task, expecially if your script gets too long or when the dataset itself is very large. In these circumstances, you want to save your modified data under **a different name** and preferably in a different directory. Anyways, the important point is that you should **never overwrite your original dataset**.
 
