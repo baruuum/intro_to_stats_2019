@@ -725,7 +725,7 @@ $$x^\ast = \frac{1}{n}\sum_{i=1}^n x_i$$
 
 the sample mean. 
 
-As smaller variances lead to narrower CIs and the sample mean minimizes the variance of the predited value, it follows that the CI will be the narrowest at the sample mean. Also, from the functional form of $g$, we see that the CIs will grow wider at a quadratic rate as we move away from the sample mean, which is also reflected in the plot we created above.
+As smaller variances lead to narrower CIs and the sample mean minimizes the variance of the predited value, it follows that the CI will be the narrowest at the sample mean. Also, from the functional form of $g$, we see that the variance will grow wider at a quadratic rate as we move away from the sample mean. Since the square-root of a quadratic function is a convex function, it also explains why the CIs become wider in the shape they do in the plot above.
 
 Notice that this stresses an important point which is often misunderstood. It is easy to assume that the width of the CI will be narrower in the areas of the covariate space where we have the most data points. This is, however, not true; it will be narrower at the sample mean of the predictor, *regardless of how many data points we observe at/near the mean*.
 
