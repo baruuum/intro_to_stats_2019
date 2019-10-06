@@ -43,7 +43,7 @@ h3 { font-size: 20px; }
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE, 
-                      cache = FALSE,
+                      cache = TRUE,
                       fig.align = "center",
                       fig.width = 5,
                       fig.height = 4,
@@ -134,29 +134,28 @@ y_points = cond_mean(x_points)
 # function to get histogram
 get_hist = function(w, e) {
     
-    # get density of Y at X = x
-    tmp_dens = density(
-        rnorm(1e6, cond_mean(w), e)
-    )
+    # get conditional mean
+    cmean_y = cond_mean(w)
+    
+    # create grid
+    grid_y = seq(-2.5, 2.5, .1) + cmean_y
     
     # get density
-    den = tmp_dens$y
-    # get midpoints
-    mid = tmp_dens$x
+    dens = dnorm(grid_y, cmean_y, e)
     
     # generate dataset
     res = data.table(
         x = w,
-        y = mid[2:(length(mid) - 1)], 
-        z = den[2:(length(den) - 1)]
+        y = grid_y, 
+        z = dens
     )
     
     return(rbind(res, data.table(x = NA, y = NA, z = NA)))
     
 }
 
-# generate histograms
-hist_df = do.call(
+# generate density at conditional mean
+dens_df = do.call(
     "rbind",
     lapply(x_points, get_hist, e = e_var)
 )
@@ -174,7 +173,7 @@ line_df = copy(df[, "x"])[
 
 vl_df = do.call(
     "rbind",
-    lapply(x_points, function(w, d = hist_df) {
+    lapply(x_points, function(w, d = dens_df) {
     
             # generate line
             vline = seq(0, d[x == w, max(z)], length.out = 50)
@@ -231,9 +230,9 @@ plot3D::scatter3D(
     type = "l",
     lwd = 2)
 
-# add histograms
+# add density
 plot3D::scatter3D(
-    hist_df$x, hist_df$y, hist_df$z,
+    dens_df$x, dens_df$y, dens_df$z,
     col = "black",
     add = T,
     type = "l",
@@ -469,7 +468,11 @@ ehat = y - yhat
 >3. Use this estimate, in turn, to calculate the test statistic for $\hat\beta_1$.
 >4. Use `yhat` predicted above and the mean of `y` to calculate the total sum of squared (SST) and the regression sum of squared (SSR) and the coefficient of determination. 
 
-```{r eval = F, echo = F}
+---
+
+**Solution** 
+
+```{r eval = F, echo = T}
 ## sample size and number of variables -----------
 n = nrow(dat)
 k = ncol(dat)
@@ -477,9 +480,9 @@ k = ncol(dat)
 ## b0 and b1 -------------------------------------
 
 # get variance of x, mean of x, and mean of y
-var_x = var(dat$x)
-mean_x = mean(dat$x)
-mean_y = mean(dat$y)
+var_x = dat[, var(x)]
+mean_x = dat[, mean(x)]
+mean_y = dat[, mean(y)]
 # get covariance
 cov_xy = dat[, cov(x,y)]
 # calculate beta1
@@ -498,10 +501,12 @@ t1 = beta1 / se_b1
 
 ## R-squared --------------------------------------
 
-sst = sum((dat$y - mean_y)^2)
-ssr = sum((dat$y - yhat)^2)
+sst = dat[, sum((y - mean_y)^2)]
+ssr = dat[, sum((y - yhat)^2)]
 r2 = (sst - ssr) / sst
 ```
+
+---
 
 We can, in fact, the whole regression table as a `matrix` for further use:
 
@@ -567,104 +572,160 @@ ggplot(dat, aes(x = x, y = y)) +
 ```
 The shaded area is the 95% confidence interval for the regression line. Note that this is **not** the range of values into which we expect *observations* to fall with probability .95 (just look at the plot!). It's the area into which we expect the (sample) regression line to fall 95% of the time if we would sample infinitely many times from the same data-generating process and draw the line $\hat y = \hat\beta_0 + \hat\beta_1 x$. You can think of it as predicting the conditional mean  for all points on the x-axis; for each point $x$, you'll get a confidence interval for the predicted value $\hat y = \hat\beta_0 + \hat\beta_1 x$ and connecting the lower- and upper-bounds of this confidence interval over the range of $X$ will create the blue area shown in the plot.
 
+<br>
 
-<!-- # Appendix: About Confidence Intervals of Regression Lines -->
+# Appendix: About Confidence Intervals of Regression Lines
 
-<!-- **This part is not required for the class and only provided for the extremely curious**, with some background in linear algebra. The textbook by Fox that is in the recommendation list would give you sufficient background to understand what follows. But, to reiterate, it's perfectly fine (and even natural) if you are confused from the very first sentence onward. -->
+This section is devoted to Josh's question about the shape of the confidence interval of the regression line: why is it narrower in the middle and wider at the end?
 
-<!-- Let $\mathbf{y}_n$ be a $n\times 1$ random vector of outcomes and $\mathbf{X}_n$ be a $n\times k$ matrix of predictors, which are either fixed or random, and in which the first column is filled with ones. For notational reasons, we use lower case letters for observed data as well as random variables.  -->
+**This part is not required for the class and only provided for the extremely curious with some background in linear algebra**. I thought I will leave it here for those of you who have done some linear alebra, or just so that you can come back after you have studied it a little bit. The textbook by Fox that is in the recommendation list would give you sufficient background to understand what follows. But, to reiterate, *it's perfectly fine (and even natural) if you are confused from the very first sentence onward.*
 
-<!-- The OLS estimator of the regression coefficients in a linear regression model is given as -->
+First let us establish some notation. Let $\mathbf{y}_n$ be a $n\times 1$ random vector of outcomes and $\mathbf{X}_n$ be a $n\times k$ matrix of predictors in which the first column is filled with ones. We use lower case letters for observed data as well as random variables.
 
-<!-- $$ \boldsymbol{\hat\beta} = (\mathbf{X}_n'\mathbf{X}_n)^{-1}\mathbf{X}_n'\mathbf{y}_n.$$ -->
+The OLS estimator of the regression coefficients in a linear regression model is given as
 
-<!-- Under the assumption of homoskedasticity, the covariance matrix of $\boldsymbol{\hat\beta}$ is estimated by -->
+$$ \boldsymbol{\hat\beta} = (\mathbf{X}_n'\mathbf{X}_n)^{-1}\mathbf{X}_n'\mathbf{y}_n.$$
 
-<!-- $$ \widehat{\text{Cov}}[\boldsymbol{\hat\beta}\,\vert\,\textbf{X}_n] = \frac{\hat\sigma^2}{n} \left(\frac{\mathbf{X}_n'\mathbf{X}_n}{n}\right)^{-1}.$$ -->
+Under the assumption of homoskedasticity, the covariance matrix of $\boldsymbol{\hat\beta}$ is 
 
-<!-- Also, in large samples, we can approximate the distribution of $\boldsymbol{\hat\beta}$ by  -->
+$$ \text{Cov}[\boldsymbol{\hat\beta}\,\vert\,\textbf{X}_n] = \sigma^2(\mathbf{X}_n'\mathbf{X})^{-1} =  \frac{\sigma^2}{n} \left(\frac{\mathbf{X}_n'\mathbf{X}_n}{n}\right)^{-1}.$$
 
-<!-- $$\boldsymbol{\hat\beta}\sim \text{Normal}\left(\boldsymbol{\beta}, \frac{\sigma^2}{n} \mathbf{V}^{-1}\right)$$ -->
+Also, by the multivariate Central Limit Theorem, the statistic
 
-<!-- where $\mathbf{V} = \text{plim}_{n\rightarrow\infty}\left(\frac{\mathbf{X}_n'\mathbf{X}_n}{n}\right)$ is assumed to be positive-definite matrix. -->
+$$ \sqrt{n}(\boldsymbol{\hat\beta} - \boldsymbol{\beta})$$
 
-<!-- Now, our within-sample prediction for the conditional mean of the outcome at a value $X = x_i$ is given as $\hat y_i = \mathbf{x}_i'\boldsymbol{\hat\beta}$, where $\textbf{x}_i = [1, x_i]'$. But as $\boldsymbol{\hat\beta}$ is Normally distributed, $\hat y_i$, being a linear combination of $\boldsymbol{\hat\beta}$, is Normally distributed as well for large $n$, with mean equal to  -->
+converges to a random vector $\mathbf z$ as $n \rightarrow \infty$, where $\mathbf{z}$ has distribution
 
-<!-- $$\text{E}[\hat y_i\,\vert\,\mathbf X_n] = \mathbf{x}_i'\text{E}[\hat\beta\,\vert\,\mathbf{X}_n] = \mathbf{x}_i'\boldsymbol{\beta}$$ -->
+$$ \mathbf z \sim \text{Normal}\Big(\mathbf{0}, \sigma^2\mathbf{V}^{-1}\Big)$$
 
-<!-- and variance -->
+and where
 
-<!-- $$\text{Var}[\hat y_i\,\vert\,\textbf{X}_n] = \text{Var}[\mathbf{x}_i'\boldsymbol{\hat\beta}|\mathbf{X}_n]=  \frac{\sigma^2\mathbf{x}_i'\mathbf{V}^{-1}\mathbf{x}_i}{n} = v(\hat y_i).$$ -->
+$$\mathbf{V} = \text{plim}_{n\rightarrow\infty}\left(\frac{\mathbf{X}_n'\mathbf{X}_n}{n}\right)$$
 
-<!-- Hence we might estimate the variance of $\hat y_i$ by the consistent estimator -->
+is assumed to be a positive-definite matrix (this requires some assumptions regarding the behavior of $\mathbf{X}_n$ as $n$ grows large).
 
-<!-- $$\widehat{\text{Var}}[\hat y_i\,\vert\,\textbf{X}_n] = \widehat{\text{Var}}[\mathbf{x}_i'\boldsymbol{\hat\beta}|\mathbf{X}_n]=  n^{-1}\hat\sigma^2\mathbf{x}_i'\left[\frac{\mathbf{X}_n'\mathbf{X}_n}{n}\right]^{-1}\mathbf{x}_i = \hat v(\hat y_i),$$ -->
+This suggests that we can approximate the distribution of $\boldsymbol{\hat\beta}$ by
 
-<!-- and construct an approximate 95% confidence interval for $\hat y_i$ as -->
+$$\boldsymbol{\hat\beta}\sim \text{Normal}\left(\boldsymbol{\beta}, \frac{\hat\sigma^2}{n} \mathbf{\hat V}^{-1}\right)$$
 
-<!-- $$ \hat y_i \pm 1.96 \sqrt{\hat v(\hat y_i)}.$$ -->
+in large samples, where $\mathbf{\hat V} =  \left(\frac{\mathbf{X}_n'\mathbf{X}_n}{n}\right)$. 
 
-<!-- What we have called above the 95% confidence interval for the regression line above is in essence a series of point-wise confidence intervals for different $x_i$ values. In other words, for each point $X=x_i$ in our sample, we calculate the confidence interval for $\hat y_i$, after which the lower- and upper-bounds are connected by lines. -->
+Now, our predicted value for the conditional mean of the outcome at $X = x_i$ is given as $\hat y_i = \mathbf{x}_i'\boldsymbol{\hat\beta}$, where $\textbf{x}_i = [1, x_i]'$. But as $\boldsymbol{\hat\beta}$ is Normally distributed, $\hat y_i$, being a linear combination of $\boldsymbol{\hat\beta}$, is Normally distributed as well for large $n$, with mean equal to
 
-<!-- We might check this in R: -->
+$$\text{E}[\hat y_i\,\vert\,\mathbf X_n] = \mathbf{x}_i'\text{E}[\hat\beta\,\vert\,\mathbf{X}_n] = \mathbf{x}_i'\boldsymbol{\beta}$$
 
-<!-- ```{r} -->
-<!-- # get coefs and covariance matrix -->
-<!-- b  = coef(fit) -->
-<!-- VC = vcov(fit) -->
+and variance
 
-<!-- # pointwise se at point x -->
-<!-- pwise_int = function(x, level, beta, VC) { -->
+$$\text{Var}[\hat y_i\,\vert\,\textbf{X}_n] = \text{Var}[\mathbf{x}_i'\boldsymbol{\hat\beta}|\mathbf{X}_n]=  \frac{\sigma^2\mathbf{x}_i'\mathbf{V}^{-1}\mathbf{x}_i}{n} = v(\hat y_i).$$
 
-<!--     # get prediction at x -->
-<!--     a = c(1, x) -->
-<!--     p = sum(a * beta) -->
+Hence we might estimate the variance of $\hat y_i$ by the consistent estimator
 
-<!--     # get se of prediction at x   -->
-<!--     se = sqrt(t(a) %*% VC %*% a) -->
+$$\widehat{\text{Var}}[\hat y_i\,\vert\,\textbf{X}_n] = \widehat{\text{Var}}[\mathbf{x}_i'\boldsymbol{\hat\beta}|\mathbf{X}_n]=  n^{-1}\hat\sigma^2\mathbf{x}_i'\mathbf{\hat V}^{-1}\mathbf{x}_i = \hat v(\hat y_i),$$
 
-<!--     # return lower and upper intervals -->
-<!--     return(c(p - 1.96 * se, p + 1.96 * se)) -->
-<!-- } -->
+and construct an approximate 95% confidence interval for $\hat y_i$ as
 
-<!-- # get CIs -->
-<!-- ci_hand = sapply( -->
-<!--     dat$x,  -->
-<!--     pwise_int,  -->
-<!--     level = .95,  -->
-<!--     beta = b,  -->
-<!--     VC = VC -->
-<!-- ) -->
-<!-- ci_hand = t(ci_hand) -->
-<!-- ``` -->
-<!-- Plotting the two confidence intervals against each other, we see they are the same (up to rounding error): -->
-<!-- ```{r, fig.width = 10, fig.height = 6} -->
-<!-- par(mfrow = c(1, 2)) -->
-<!-- # compare lower bound -->
-<!-- plot(reg_ci[, 2] , ci_hand[, 1],  -->
-<!--      axes = T, ann = F,  pch = 19, -->
-<!--      col = "grey") -->
-<!-- abline(a = 0, b = 1, col = scales::alpha("purple", .5)) -->
-<!-- box() -->
-<!-- r = round(cor(reg_ci[, 2] , ci_hand[, 1]), 3) -->
-<!-- mtext( -->
-<!--     bquote( -->
-<!--         "Lower Bound ("~rho~"="~.(r)~")" -->
-<!--     ), -->
-<!--     side = 3 -->
-<!-- ) -->
+$$ \hat y_i \pm 1.96 \sqrt{\hat v(\hat y_i)}.$$
 
-<!-- # compare upper bound -->
-<!-- plot(reg_ci[, 3] , ci_hand[, 2],  -->
-<!--      axes = T, ann = F, pch = 19, -->
-<!--      col = "grey") -->
-<!-- abline(a = 0, b = 1, col = scales::alpha("purple", .5)) -->
-<!-- box() -->
-<!-- r = round(cor(reg_ci[, 3] , ci_hand[, 2]), 3) -->
-<!-- mtext( -->
-<!--     bquote( -->
-<!--         "Upper Bound ("~rho~"="~.(r)~")" -->
-<!--     ), -->
-<!--     side = 3 -->
-<!-- ) -->
-<!-- ``` -->
+What we have called above the 95% confidence interval for the regression line above is in essence a series of point-wise confidence intervals for different $x_i$ values. In other words, for each point $X=x_i$ in our sample, we calculate the confidence interval for $\hat y_i$, after which the lower- and upper-bounds are connected by lines.
+
+We might check this in R:
+
+```{r}
+# get coefficients
+b  = coef(fit)
+# get covariance matrix (sigma_hat / n) * inv(X'X / n)
+VC = vcov(fit)
+
+# pointwise se at point x
+pwise_int = function(x, level, beta, VC) {
+
+    # get prediction at x
+    a = c(1, x)
+    p = sum(a * beta)
+
+    # get se of prediction at x
+    se = sqrt(t(a) %*% VC %*% a)
+
+    # return lower and upper intervals
+    return(c(p - 1.96 * se, p + 1.96 * se))
+}
+
+# get CIs
+ci_hand = sapply(
+    dat$x,
+    pwise_int,
+    level = .95,
+    beta = b,
+    VC = VC
+)
+ci_hand = t(ci_hand)
+```
+Plotting the two confidence intervals against each other, we see they are the same (up to rounding error):
+```{r, fig.width = 10, fig.height = 6}
+par(mfrow = c(1, 2))
+# compare lower bound
+plot(reg_ci[, 2] , ci_hand[, 1],
+     axes = T, ann = F,  pch = 19,
+     col = "grey")
+abline(a = 0, b = 1, col = scales::alpha("purple", .5))
+box()
+r = round(cor(reg_ci[, 2] , ci_hand[, 1]), 3)
+mtext(
+    bquote(
+        "Lower Bound ("~rho~"="~.(r)~")"
+    ),
+    side = 3
+)
+
+# compare upper bound
+plot(reg_ci[, 3] , ci_hand[, 2],
+     axes = T, ann = F, pch = 19,
+     col = "grey")
+abline(a = 0, b = 1, col = scales::alpha("purple", .5))
+box()
+r = round(cor(reg_ci[, 3] , ci_hand[, 2]), 3)
+mtext(
+    bquote(
+        "Upper Bound ("~rho~"="~.(r)~")"
+    ),
+    side = 3
+)
+```
+
+But the width of the confidence interval is a function of standard error, which is in turn a strictly increasing function of the estimated variance $\widehat{\text{Var}}[\hat y_i\,\vert\,\mathbf{X}_n]$. Thus, we can find the point at which the confidence interval is the narrowest by finding the value $x^\ast$ which minimizes the variance.
+
+Let $\mathbf{w} = [1, x]'$, where $x$ is a generic value of that the random variable $X$ may take on. As other terms in the formulation of the variance are fixed, it suffices to consider the function
+
+$$\begin{aligned}
+g(x) &= \mathbf{w}'\mathbf{\hat V}^{-1}\mathbf{w} \\
+&=\sum_{k=1}^K\sum_{l=1}^K w_k w_lv_{kl}^{-1}.
+\end{aligned}$$
+
+to find the value of $x$ at which the CI is minimized, where $v_{kl}^{-1}$ is the $(k,l)$th entry of the matrix $\mathbf{\hat V}^{-1}$. 
+
+We are lucky in this case, since the first element of $\mathbf{w}$ is equal to one, $\mathbf{V}^{-1}$ is symmetric, and $\mathbf{\hat V}$ is only a $2\times 2$ matrix. So, have only one moving piece and the inverse of $\mathbf{\hat V}$ can be directly calculated by hand. First we rewrite the objective function as
+
+$$g(x) = v_{11}^{-1} + 2xv_{12}^{-1} + x^2v_{22}^{-1}.$$
+
+As this is a quadratic function, the value $x^\ast$ that minimizes $g$ is
+
+$$x^\ast = \frac{v_{12}^{-1}}{v_{22}^{-1}}.$$
+
+But the elements of $\mathbf{\hat V}^{-1}$ are 
+
+$$\mathbf{\hat V}^{-1} = \frac{n}{\text{det}(\mathbf{\hat V})} \begin{bmatrix}
+\sum_{i=1}^n x_i^2 & - \sum_{i=1}^n x_i \\
+- \sum_{i=1}^n x_i & n
+\end{bmatrix}$$
+
+Plugging in the right values, noting that the determinant and $n$ are canceled out in the numerator and denominator, we obtain 
+
+$$x^\ast = \frac{1}{n}\sum_{i=1}^n x_i$$
+
+the sample mean. 
+
+As smaller variances lead to narrower CIs, and the sample mean minimizes the variance of the predited value, it follows that the CI will be the narrowest at the sample mean. Also, from the functional form of $g$, we see that the CIs will grow wider at a quadratic rate as we move away from the sample mean, which is also reflected in the plot we created above.
+
+Notice that this stresses an important point which is often misunderstood. It is easy to assume that the width of the CI will be narrower in the areas of the covariate space where we have the most data points. This is, however, not true; it will be narrower at the sample mean, *regardless of how many data points we observe at the mean* (suppose for example that the distribution of $X$ is bimodal with the mean between the modes).
+
+An intuitive explantion of why this is so would require another document. The gist of it lies in the fact that we are imposing a very restrictive functional form on the model. For those of you who have read on until here, I encourage you to run some simulations where $X$ has a bimodal shape with the mean being placed between the modes. Run just a few simulations, maybe 5. In each of the runs, simulate $(X,Y)$, fit a regression, and plot the line against the points. Try to remember the distribution of the points and the line, but save the equation of the regression line as well. Then plot these lines you got from each simulation run in a separate graph. You'll see how the regression line behaves and might get an understanding of why it cannot be otherwise.
