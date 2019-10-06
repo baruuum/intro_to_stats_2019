@@ -574,7 +574,7 @@ The shaded area is the 95% confidence interval for the regression line. Note tha
 
 <br>
 
-# Appendix: About Confidence Intervals of Regression Lines
+# Appendix: Response to Josh's Question (Shape of Confidence Intervals of Regression Lines)
 
 This section is devoted to Josh's question about the shape of the confidence interval of the regression line: why is it narrower in the middle and wider at the end?
 
@@ -703,15 +703,17 @@ g(x) &= \mathbf{w}'\mathbf{\hat V}^{-1}\mathbf{w} \\
 
 to find the value of $x$ at which the CI is minimized, where $v_{kl}^{-1}$ is the $(k,l)$th entry of the matrix $\mathbf{\hat V}^{-1}$. 
 
-We are lucky in this case, since the first element of $\mathbf{w}$ is equal to one, $\mathbf{V}^{-1}$ is symmetric, and $\mathbf{\hat V}$ is only a $2\times 2$ matrix. So, have only one moving piece and the inverse of $\mathbf{\hat V}$ can be directly calculated by hand. First we rewrite the objective function as
+We are lucky in this case, since the first element of $\mathbf{w}$ is equal to one, $\mathbf{V}^{-1}$ is symmetric, and $\mathbf{\hat V}$ is only a $2\times 2$ matrix. We have only one moving piece and the inverse of $\mathbf{\hat V}$ can be directly calculated by hand, so we won't need to rely on matrix calculus or more advanced mathematics (although those solutions would be more general). 
+
+First, we use the fact that $w_1 = 1$, and rewrite the objective function as
 
 $$g(x) = v_{11}^{-1} + 2xv_{12}^{-1} + x^2v_{22}^{-1}.$$
 
-As this is a quadratic function, the value $x^\ast$ that minimizes $g$ is
+As this is a quadratic function, the value $x^\ast$ that minimizes $g$ is 
 
-$$x^\ast = \frac{v_{12}^{-1}}{v_{22}^{-1}}.$$
+$$x^\ast = \frac{v_{12}^{-1}}{v_{22}^{-1}}$$
 
-But the elements of $\mathbf{\hat V}^{-1}$ are 
+(Just differentiate with respect to $x$, set the result to zero, and solve for $x$). But the elements of $\mathbf{\hat V}^{-1}$ are 
 
 $$\mathbf{\hat V}^{-1} = \frac{n}{\text{det}(\mathbf{\hat V})} \begin{bmatrix}
 \sum_{i=1}^n x_i^2 & - \sum_{i=1}^n x_i \\
@@ -719,13 +721,12 @@ $$\mathbf{\hat V}^{-1} = \frac{n}{\text{det}(\mathbf{\hat V})} \begin{bmatrix}
 \end{bmatrix}$$
 
 Plugging in the right values, noting that the determinant and $n$ are canceled out in the numerator and denominator, we obtain 
-
 $$x^\ast = \frac{1}{n}\sum_{i=1}^n x_i$$
 
 the sample mean. 
 
-As smaller variances lead to narrower CIs, and the sample mean minimizes the variance of the predited value, it follows that the CI will be the narrowest at the sample mean. Also, from the functional form of $g$, we see that the CIs will grow wider at a quadratic rate as we move away from the sample mean, which is also reflected in the plot we created above.
+As smaller variances lead to narrower CIs and the sample mean minimizes the variance of the predited value, it follows that the CI will be the narrowest at the sample mean. Also, from the functional form of $g$, we see that the CIs will grow wider at a quadratic rate as we move away from the sample mean, which is also reflected in the plot we created above.
 
-Notice that this stresses an important point which is often misunderstood. It is easy to assume that the width of the CI will be narrower in the areas of the covariate space where we have the most data points. This is, however, not true; it will be narrower at the sample mean, *regardless of how many data points we observe at the mean* (suppose for example that the distribution of $X$ is bimodal with the mean between the modes).
+Notice that this stresses an important point which is often misunderstood. It is easy to assume that the width of the CI will be narrower in the areas of the covariate space where we have the most data points. This is, however, not true; it will be narrower at the sample mean of the predictor, *regardless of how many data points we observe at/near the mean*.
 
-An intuitive explantion of why this is so would require another document. The gist of it lies in the fact that we are imposing a very restrictive functional form on the model. For those of you who have read on until here, I encourage you to run some simulations where $X$ has a bimodal shape with the mean being placed between the modes. Run just a few simulations, maybe 5. In each of the runs, simulate $(X,Y)$, fit a regression, and plot the line against the points. Try to remember the distribution of the points and the line, but save the equation of the regression line as well. Then plot these lines you got from each simulation run in a separate graph. You'll see how the regression line behaves and might get an understanding of why it cannot be otherwise.
+An intuitive explantion of why this is so would require another document. The gist of it lies in the fact that we are imposing a very restrictive functional form on the model. Thus, the conclusion would be different if we had discretized the predictor variable into a set of dummy variables. For those of you who have read on until here, I encourage you to run some simulations where $X$ has a bimodal shape with the mean being placed between the modes. Run just a few simulations, maybe 5. In each of the runs, simulate $(X,Y)$, fit a regression, and plot the line against the points. Try to remember the distribution of the points and the line, but save the equation of the regression line as well. Then plot these lines you got from each simulation run in a separate graph. You'll see how the regression line behaves and might get an understanding of why it cannot be otherwise.
