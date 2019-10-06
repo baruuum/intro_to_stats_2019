@@ -120,7 +120,7 @@ par(old_par)
 
 There are two things to notice before we move on. The first is that $\text{E}[Y|X = x]$ will be a function of $x$ and not of $Y$. In the plot above for example, we see that the value $\text{E}[Y|X = x]$ will change for different values of $x$; but once we have decided on a particular $X = x$, the value of $\text{E}[Y|X = x]$ is completely determined: we just average up all the vertical scatter at that point. 
 
-The second is that the analogy between *averaging the vertical scatter* at a particular value $X=x$ and the conditional mean $E[Y|X = x]$ is, strictly speaking, not perfrect. This is because the points represent concrete values of $Y$ that have been *realized*, while $Y$ is a random variable that is characterized by a whole *distribution* at $X = x$. A more appropriate plot that emphasizes that $E[Y|X = x]$ is the mean of the distribution of $Y$ at $X = x$ would look like the following one, where the black lines represent the distribution of $Y$ at three selected points of $X = x$. It shows also that the conditional mean function (the red line) passes through the mean of these distributions.
+The second is that the analogy between *averaging the vertical scatter* at a particular value $X=x$ and the conditional mean $E[Y|X = x]$ is, strictly speaking, not perfect. This is because the points represent concrete values of $Y$ that have been *realized*, while $Y$ is a random variable that is characterized by a whole *distribution* at $X = x$. A more appropriate plot that emphasizes that $E[Y|X = x]$ is the mean of the distribution of $Y$ at $X = x$ would look like the following one, where the black lines represent the distribution of $Y$ at three selected points of $X = x$. It shows also that the conditional mean function (the red line) passes through the mean of these distributions.
 ```{r, echo = F, fig.height = 6, fig.width = 7}
 # generate data.table with z = 0
 df = data.table(x = x, y = y, z = 0)
@@ -246,7 +246,7 @@ Imagining to draw such black lies for all values of $X$ would give us a better i
 
 As you've probably already noticed, the plot describes a relationship between two variables: $Y$ and $X$. That we are interested in the conditional mean of $Y$ given $X = x$ might be understood as saying that we want to predict $Y$ from $X$. 
 
-In general, the "true" conditional mean of $Y$ might be any arbitrary funtion of $X$. Indeed, it would be very surprising to find that the relationship between $\text{E}[Y|X]$ and $X$ would follow a simple formula. The problem is, however, that we won't be able to meaningfully interpret the relationship between the conditional mean of $Y$ and $X$ if the function becomes too complicated. We need a simple functional form for this task.
+In general, the "true" conditional mean of $Y$ might be any arbitrary function of $X$. Indeed, it would be very surprising to find that the relationship between $\text{E}[Y|X]$ and $X$ would follow a simple formula. The problem is, however, that we won't be able to meaningfully interpret the relationship between the conditional mean of $Y$ and $X$ if the function becomes too complicated. We need a simple functional form for this task.
 
 In **simple linear regression**, we **assume** that the relationship between $\text{E}[Y|X]$ and $X$ has the following form:
 
@@ -265,7 +265,7 @@ lines(x, predict(lm(y ~ x), type = "response"),
 
 This is indeed a very bad representation of the pattern we observe! You will learn how to model such patterns in the data later in the course. 
 
-For now, let us assume that $\text{E}[Y|X] = \beta_0 + \beta_1$ is a good approximation to the "true" process that generates $Y$. That is, if we would randomly sample from this process, we would obatin a plot like the following:
+For now, let us assume that $\text{E}[Y|X] = \beta_0 + \beta_1$ is a good approximation to the "true" process that generates $Y$. That is, if we would randomly sample from this process, we would obtain a plot like the following:
 
 ```{r echo = F, fig.width = 7, fig.height = 5}
 cond_mean_linear = function(x) {1.2 + .75 * x}
@@ -276,7 +276,7 @@ box()
 curve(cond_mean_linear(x), add = T, col = "red", lwd = 3)
 ```
 
-Under these circumstances, we could find the mean of $Y$ at the value $X = x^\ast$ by pluggin-in $x^\ast$ into the place of $X$ of the equation:
+Under these circumstances, we could find the mean of $Y$ at the value $X = x^\ast$ by pluging-in $x^\ast$ into the place of $X$ of the equation:
 
 $$\text{E}[Y|X = x^\ast] = \beta_0 + \beta_1 x^\ast.$$
 
@@ -286,7 +286,7 @@ $$\begin{aligned}
 \text{E}[Y|X = 0] &= \beta_0 + \beta_1 \times 0 \\ &= \beta_0.
 \end{aligned}$$
 
-Thus, $\beta_0$ will be the **intercept** of our regression model. Next, suppose we are interested in the difference betwen the conditional mean at $X = 1$ and that at $X = 0$. Again, we can calculate the difference  by simply plugging-in the appropriate values in the place of $X$:
+Thus, $\beta_0$ will be the **intercept** of our regression model. Next, suppose we are interested in the difference between the conditional mean at $X = 1$ and that at $X = 0$. Again, we can calculate the difference  by simply plugging-in the appropriate values in the place of $X$:
 
 $$\begin{aligned}
 \text{E}[Y|X = 1] - \text{E}[Y|X = 0] &= (\beta_0 + \beta_1) - \beta_0 \\ &= \beta_1.\end{aligned}$$
@@ -351,7 +351,7 @@ $$Y_i = \beta_0 + \beta_1 X_i + \epsilon_i.$$
 
 An important point to remember is that this equation is also **not observed**. In know this might be confusing, but I believe the best way to think about this is to think of $(Y_i, X_i)_{i=1}^n$ as the placeholder of a *hypothetical* sample that *could* have been drawn from the population regression equation. Each time we draw $(Y_i, X_i)_{i=1}^n$ from the population, we will obtain different values in our *observed* sample. This is the exact same logic as that we followed when we were discussing the sampling distribution of a statistic.
 
-Then what do we observe? We observe one *particular* case of the possible samples we could have drawn from the process if we were to follow the same procedure. Let us denote this particular sample with lower-case letters: $(y_i, x_i)_{i=1}^n$. Based on this particular *observed* sample, we try to make inference about the parameters of the population-level regression eqaution.
+Then what do we observe? We observe one *particular* case of the possible samples we could have drawn from the process if we were to follow the same procedure. Let us denote this particular sample with lower-case letters: $(y_i, x_i)_{i=1}^n$. Based on this particular *observed* sample, we try to make inference about the parameters of the population-level regression equation.
 
 Simulating an observed sample from a known population regression equation might be helpful to make these concepts clearer. Let $\beta_0 = 0.3, \beta_1 = 0.5$, $X \sim \text{Normal}(-1, 0.85^2)$, and $\epsilon \vert X \sim \text{Normal}(0, \sigma^2)$ with $\sigma = 1.5$. So, our population regression equation would look like
 
@@ -395,7 +395,7 @@ dat = data.table(y = y, x = x)
 
 Notice that this simulation procedure is *different* from the simulations we have done so far. In the previous labs, we had a *concrete* population, which we called `pop`, and we drew *concrete* observations from it. Here we don't have such a dataset from which we are drawing samples. Rather, we are directly drawing samples from distributions and an equation that represents our theory about how the data comes to existence.
 
-The object that we would observe in any real-life data analysis is `dat`. Yet, if we would run this code a second time, we will get another sample, call it `dat2`, which will have the *same* dimensions as `dat` and comes from the *same* data-generating processs, but which would be *different* from the concrete dataset `dat` that we have just simulated. 
+The object that we would observe in any real-life data analysis is `dat`. Yet, if we would run this code a second time, we will get another sample, call it `dat2`, which will have the *same* dimensions as `dat` and comes from the *same* data-generating process, but which would be *different* from the concrete dataset `dat` that we have just simulated. 
 
 <br>
 
@@ -410,7 +410,7 @@ ggplot(dat, aes(x = x, y = y)) +
     labs(x = "X", y = "Y") + 
     theme_bw()
 ```
-We see from the scatterplot that there is a positive, but not too strong, relationship between `y` and `x` in our data (of course, we've generated the data ourself). The question is whether we have enough data to reject the null hypothesis that $H_0 : \hat\beta_1 = 0$. To figure this out, use the ordinary least squares estimator via the `lm` function in R.
+We see from the scatter plot that there is a positive, but not too strong, relationship between `y` and `x` in our data (of course, we've generated the data ourselves). The question is whether we have enough data to reject the null hypothesis that $H_0 : \hat\beta_1 = 0$. To figure this out, use the ordinary least squares estimator via the `lm` function in R.
 
 
 The first argument of the `lm` function has to be a `formula` that consists of the outcome variable followed by a `~` and, thereafter, the predictor variable. The variable names have to match the names of our data. In our case, this would look like `y ~ x`. The second argument of the `lm` function is the name of the dataset on which we want to fit the model. This would be the `dat` object, we have just created.
@@ -431,7 +431,7 @@ $$\hat\epsilon_i = y_i - \hat y_i = y_i - (\hat\beta_0 + \hat\beta_1 x_i).$$
 
 - The table that follows is often called the *regression table*. The (Intercept) row shows statistics for $\hat\beta_0$ (our intercept) and the second row shows statistics for $\hat\beta_1$. In general, the `lm` function will print the variable name of the corresponding coefficient in the first column of the regression table.
 
-- The second column shows our estimates, $(\hat\beta_0, \hat\beta_1)$. Notice that the estimates are not exactly the same as the parameters that we have used to generate the data. This is only natural since there is always random variation involved in sampling. Yet, we can exect that, on average (over infinitely many repeated samples), we will hit the mark. Also, since the OLS estimator is consistent, we can expect that our estimates should become closer and closer to the true parameter values as we increase our sample size. 
+- The second column shows our estimates, $(\hat\beta_0, \hat\beta_1)$. Notice that the estimates are not exactly the same as the parameters that we have used to generate the data. This is only natural since there is always random variation involved in sampling. Yet, we can expect that, on average (over infinitely many repeated samples), we will hit the mark. Also, since the OLS estimator is consistent, we can expect that our estimates should become closer and closer to the true parameter values as we increase our sample size. 
 
 >**EXERCISE** Interpret the coefficients. What are they telling us about the relationship between $y_i$ and $x_i$ in our data? What are they telling us about the population?
 
@@ -446,7 +446,7 @@ $$ t_{\beta_k} = \frac{\hat\beta_k}{\widehat{\text{SE}}(\hat\beta_k)}.$$
 
 - The last column of the regression table shows the p-value for each test statistic. 
 
->**EXERCISE** Based on these results whould you reject or not reject the null hypotheses $\beta_0 = 0$ and $\beta_1 = 0$?
+>**EXERCISE** Based on these results would you reject or not reject the null hypotheses $\beta_0 = 0$ and $\beta_1 = 0$?
 
 - Lastly, the `Residual standard error` is what we have called the standard error of the regression, $\hat \sigma$. It is our estimate for the conditional variance of error term of the model and calculated as
 $$\hat\sigma = \sqrt{\frac{\sum_{i=1}^n (y_i - \hat y_i)^2}{n - K}} =  \sqrt{\frac{\sum_{i=1}^n \hat\epsilon_i^2}{n - K}},$$
@@ -463,9 +463,9 @@ ehat = y - yhat
 >
 >1. Calculate the variance of `x`, the mean of `x`, the mean of `y`, and the covariance between `x` and `y`. Using these values, calculate $\hat\beta_0$ and $\hat\beta_1$.
 >1. Using `ehat`, calculate $\hat\sigma$. Compare your results with that of the regression table.
->2. Use this estimate to calcuate the standard error for $\hat\beta_1$.
+>2. Use this estimate to calculate the standard error for $\hat\beta_1$.
 >3. Use this estimate, in turn, to calculate the test statistic for $\hat\beta_1$.
->4. Use `yhat` predicted above and the mean of `y` to calculat the total sum of squared (SST) and the regression sum of squared (SSR) and the coefficient of determination. 
+>4. Use `yhat` predicted above and the mean of `y` to calculate the total sum of squared (SST) and the regression sum of squared (SSR) and the coefficient of determination. 
 
 ```{r eval = F, echo = F}
 ## sample size and number of variables -----------
@@ -602,7 +602,7 @@ The shaded area is the 95% confidence interval for the regression line. Note tha
 
 <!-- $$ \hat y_i \pm 1.96 \sqrt{\hat v(\hat y_i)}.$$ -->
 
-<!-- What we have called above the 95% confidence interval for the regression line above is in essence a series of point-wise confidence intervals for different $x_i$ values. In other words, for each point $X=x_i$ in our sample, we caluclate the confidence interval for $\hat y_i$, after which the lower- and upper-bounds are connected by lines. -->
+<!-- What we have called above the 95% confidence interval for the regression line above is in essence a series of point-wise confidence intervals for different $x_i$ values. In other words, for each point $X=x_i$ in our sample, we calculate the confidence interval for $\hat y_i$, after which the lower- and upper-bounds are connected by lines. -->
 
 <!-- We might check this in R: -->
 
