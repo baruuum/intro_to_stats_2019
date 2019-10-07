@@ -806,7 +806,7 @@ g(x) &amp;= \mathbf{w}&#39;\mathbf{\hat V}^{-1}\mathbf{w} \\
 <p>First, we use the fact that <span class="math inline">\(w_1 = 1\)</span>, and rewrite the objective function as</p>
 <p><span class="math display">\[g(x) = v_{11}^{-1} + 2xv_{12}^{-1} + x^2v_{22}^{-1}.\]</span></p>
 <p>As this is a quadratic function, the value <span class="math inline">\(x^\ast\)</span> that minimizes <span class="math inline">\(g\)</span> is</p>
-<p><span class="math display">\[x^\ast = \frac{v_{12}^{-1}}{v_{22}^{-1}}\]</span></p>
+<p><span class="math display">\[x^\ast = -\frac{v_{12}^{-1}}{v_{22}^{-1}}\]</span></p>
 <p>(Just differentiate with respect to <span class="math inline">\(x\)</span>, set the result to zero, and solve for <span class="math inline">\(x\)</span>). But the elements of <span class="math inline">\(\mathbf{\hat V}^{-1}\)</span> are</p>
 <p><span class="math display">\[\mathbf{\hat V}^{-1} = \frac{n}{\text{det}(\mathbf{\hat V})} \begin{bmatrix}
 \sum_{i=1}^n x_i^2 &amp; - \sum_{i=1}^n x_i \\

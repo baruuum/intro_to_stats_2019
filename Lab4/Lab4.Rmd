@@ -711,7 +711,7 @@ $$g(x) = v_{11}^{-1} + 2xv_{12}^{-1} + x^2v_{22}^{-1}.$$
 
 As this is a quadratic function, the value $x^\ast$ that minimizes $g$ is 
 
-$$x^\ast = \frac{v_{12}^{-1}}{v_{22}^{-1}}$$
+$$x^\ast = -\frac{v_{12}^{-1}}{v_{22}^{-1}}$$
 
 (Just differentiate with respect to $x$, set the result to zero, and solve for $x$). But the elements of $\mathbf{\hat V}^{-1}$ are 
 
