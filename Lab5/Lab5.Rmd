@@ -1,0 +1,777 @@
+---
+title: "Lab5 - Multiple Regression"
+author: "Barum Park"
+date: "10/11/2019"
+output: 
+    html_document:
+        keep_md: false
+        matjax: default
+        theme: yeti
+        highlight: textmate
+        toc: true
+---
+
+<style type="text/css">
+
+body{ 
+
+    font-size: 16px;
+    line-height: 1.7em;
+
+}
+
+blockquote {
+    padding: 10px 20px;
+    margin: 0 0 20px;
+    font-size: 16px;
+    border: solid 1px;
+}
+
+h1 { font-size: 32px; }
+
+h2 { font-size: 24px; }
+
+h3 { font-size: 20px; }
+
+.nobullet li {
+  list-style-type: none;
+}
+
+</style>
+
+<br>
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, 
+                      cache = FALSE,
+                      fig.align = "center",
+                      fig.width = 4,
+                      fig.height = 3.5,
+                      letina = TRUE)
+```
+
+The extension from simple linear regression to multiple linear regression is quite straightforward when it comes to coding. If we have used 
+```
+lm(y ~ x, data = dat)
+```
+to fit a simple linear regression in R, the code to run a multiple regression is simply
+```
+lm(y ~ x1 + x2, data = dat)
+```
+That's all. 
+
+The difficulty that is added when analyzing more than one predictor lies not in the coding, but rather in interpreting the results. While we had **regression lines** in simple linear regression, we will have to deal with **regression hyperplanes** when it comes to multiple regression. 
+
+# Geometric Interpretation
+
+In the three-dimensional case, where we have two predictors, $X_1$ and $X_2$, and one outcome, $Y$, the regression hyperplane is defined by the equation
+
+$$ \text{E}[Y|X_1 = x_1, X_2 = x_2] = \beta_0 + \beta_1 x_1 + \beta_2 x_2.$$
+
+This is just a plane in a three dimensional space, which might be visualized as below:
+
+```{r echo = F, message = F}
+library("dplyr")
+library("data.table")
+library("dtplyr")
+library("plot3D")
+
+set.seed(123)
+
+n = 25
+beta0 = 20
+beta1 = 5
+beta2 = 3
+sigma = 10
+
+reg_coefs = c(beta0, beta1, beta2)
+
+x = seq(0, 10, length.out = n)
+df = setDT(expand.grid(x, x)) %>%
+    setnames(c("x1", "x2"))
+
+reg_plane = function(x1, x2, reg_coefs) {
+    
+    reg_coefs[1] + x1 * reg_coefs[2] + x2 * reg_coefs[3]
+    
+}
+    
+df[
+    , plane := reg_plane(x1, x2, reg_coefs)
+][
+    , y := plane + rnorm(.N, 0, sigma)
+]
+
+# save old pars
+par(mar = rep(.5, 4), oma = rep(0, 4))
+den = outer(x, x, reg_plane, reg_coefs)
+persp3D(x, x, den,
+       col = viridis::inferno(20, alpha = .6, end = .8),  
+       bty = "b2",
+       ticktype = "detailed",
+       cex = 0.6,
+       colkey = F,
+       lightning = TRUE, facets = FALSE,
+       xlab = "x1", ylab = "x2", zlab = "",
+       zlim = c(0, 120),
+       phi = 45,
+       theta = 130,
+       plot = T)
+```
+
+The intercept, $\beta_0$, is the point on the plane where $x_1 = 0$ and $x_2 = 0$. From the plot, we see that the intercept must be therefore approximately $\beta_0 \approx 20$. 
+
+Now, suppose we fix $x_2$ at the value $x_2 = 6$. This will give us the equation of a line:
+
+$$\begin{aligned}
+\text{E}[Y|X_1 = x_1, X_2 = 6] &= \beta_0 + \beta_1 x_1 + \beta_2 \times 6 \\
+&= (\beta_0 + \beta_2 \times 6) + \beta_1 x_1 \\
+&= \tilde \beta_0^{(6)} + \beta_1 x_1
+\end{aligned}$$
+
+where the new intercept is $\tilde \beta_0^{(6)} = \beta_0 + \beta_2\times 6$ and the slope is $\beta_1$. This line can be represent where the plane defined by the value $x_2 = 6$ and the regression plane intersect, as represented by the plot below:
+
+```{r, echo = F}
+
+par(mar = rep(.5, 4), oma = rep(0, 4))
+persp3D(x, x, den,
+       col = viridis::inferno(20, alpha = .6, end = .8),
+       bty = "b2",
+       ticktype = "detailed", 
+       cex = 0.6,
+       colkey = FALSE,
+       lightning = TRUE, facets = FALSE,
+       xlab = "x1", ylab = "x2", zlab = "",
+       zlim = c(0, 120),
+       phi = 45,
+       theta = 130,
+       plot = T)
+
+den2 = matrix(
+    rep(seq(0, 120, length.out = length(x)), each = length(x)),
+    nrow = length(x))
+              
+persp3D(x, rep(6, length(x)), 
+        den2, 
+        col = "black",
+        alpha = .3,
+        facet = TRUE,
+        add = T,
+        colkey = FALSE
+)
+```
+
+We might fix $x_2$ also at other values, say $2, 5, 8$ as shown below:
+
+```{r echo = F}
+par(mar = rep(.5, 4), oma = rep(0, 4))
+persp3D(x, x, den,
+       col = viridis::inferno(20, alpha = .6, end = .8),
+       bty = "b2",
+       ticktype = "detailed", 
+       cex = 0.6,
+       colkey = FALSE,
+       lightning = TRUE, facets = FALSE,
+       xlab = "x1", ylab = "x2", zlab = "",
+       zlim = c(0, 120),
+       phi = 45,
+       theta = 130,
+       plot = T)
+
+for (v in c(2, 5, 8)) {
+  persp3D(x, rep(v, length(x)), 
+          den2, 
+          col = "black",
+          alpha = .2,
+          facet = TRUE,
+          add = T,
+          colkey = FALSE
+  )
+}
+```
+The important point to notice here is that the slope of the regression line at these intersections remains the same and is equal to $\beta_1$. For example, if we would fix $X_2 = 2$, we have
+
+$$\begin{aligned}
+\text{E}[Y|X_1 = x_1, X_2 = 2] &= \beta_0 + \beta_1 x_1 + \beta_2 \times 2 \\
+&= (\beta_0 + \beta_2 \times 2) + \beta_1 x_1 \\
+&= \tilde \beta_0^{(2)} + \beta_1 x_1
+\end{aligned}$$
+
+If we compare this equation to that where we fixed $X_2$ at the value $6$, we see that only the intercept changes, while the slope of $X_1$ remains unchanged.
+
+Hence, regardless of where we fix $X_2$, the predicted average increase in the outcome when $X_1$ is increased will be the same. This is why we often interpret the regression coefficients of a multiple regression as the predicted average increase in $Y$ for a unit-increase in $X_1$, when **holding other variables in the model constant.** Notice that this interpretation is only possible in the linear case; only here does the slope of $X_1$ remains the same regardless of what value $X_2$ takes on. If the relationship between $X_1, X_2$ and $Y$ is non-linear, such an interpretation would not be valid anymore.
+
+The same is true for fixing $X_1$ at certain values and interpreting the slope of $X_2$ (the problem is symmetric!) The only difference would be that we slice the regression plane along the $x_1$ axis as shown below:
+
+```{r echo = F}
+par(mar = rep(.5, 4), oma = rep(0, 4))
+persp3D(x, x, den,
+       col = viridis::inferno(20, alpha = .6, end = .8),
+       bty = "b2",
+       ticktype = "detailed", 
+       cex = 0.6,
+       colkey = FALSE,
+       lightning = TRUE, facets = FALSE,
+       xlab = "x1", ylab = "x2", zlab = "",
+       zlim = c(0, 120),
+       phi = 45,
+       theta = 130,
+       plot = T)
+
+den3 = matrix(
+    rep(seq(0, 120, length.out = length(x)), length(x)),
+    ncol = length(x))
+
+
+for (v in c(2, 5, 8)) {
+  persp3D(rep(v, length(x)), x,
+          den3, 
+          col = "black",
+          alpha = .2,
+          facet = TRUE,
+          add = T,
+          colkey = FALSE
+  )
+}
+```
+
+The line at which the planes parallel to the $x2$-axis intersect with the regression plane have a slop exactly equal to $\beta_2$. Further, the line of intersection at the value $X_1 = v$ defines the regression equation when $X_1$ is fixed at the value $v$.
+
+>**EXERCISE** 
+>
+>1. What is the regression equation when $X_1$ is fixed at the value $5$? 
+>2. Can you identify this line in the figure above? 
+>3. Interpret the coefficient $\beta_2$.
+
+But this is how far we can go with visualizations (we might try really hard to visualize a four-dimensional spaces, but for five- or higher-dimensional spaces, it's hopeless). In addition, in high- dimensional spaces, our intuition often fails us, a phenomenon that is sometimes referred to as the *curse of dimensionality* (an example can be found [here](https://barumpark.com/blog/2018/the-curse-of-dimensionality/)). So, to be sure that our intuitions are indeed correct, the reliance on mathematical approaches is sometimes inevitable (fortunately, Siwei and me have checked the formulae for you already! So, we won't deal with the math stuff here!)
+
+# Interpretation Based on Shared Variance
+
+Another way to interpret multiple regression results is through intuitions regarding shared variances. This approach is best prsented using venn diagrams. For instance, consider the following plot:
+
+```{r, echo = F, message = F, fig.width = 3, fig.height = 3}
+library("VennDiagram")
+
+grid.newpage()
+
+overrideTriple = T
+
+venn_plot = draw.triple.venn(
+    area1 = 40,
+    area2 = 30,
+    area3 = 30,
+    n12 = 7,
+    n23 = 8,
+    n13 = 15,
+    n123 = 5,
+    category = c("X", "Z", "Y"),
+    cex = 0,
+    lwd = 1,
+    col = rep("white", 3),
+    fill = viridis::inferno(3, end = .8),
+    cat.cex = rep(2, 3),
+    cat.col = viridis::inferno(3, end = .8),
+    cat.dist = rep(.1, 3)
+)
+```
+Think of these circles as representing the variances of the variables $X$, $Y$, and $Z$, where $Y$ is our outcome and $X$ and $Z$ are our predictors. The shared areas represent the amount to which the variances are shared (i.e., the covariance between the ariables). We see that $\text{Var}[X] > \text{Var}[Z] \approx \text{Var}[Y]$. Also, from the shared areas, $\text{Cov}[X, Y] > \text{Cov}[Z, Y]$. Now, the question is *what areas in this venn diagram are represented by the regression coeffients $\beta_1$ and $\beta_2$?*
+
+If we would run a regression of $Y$ on $X$ along, we know that the regression coefficient is the represented by the shared area between the two circles representing these two variables in the plot (to be more precise, it would be the proportion of the shared area with $Y$ among the total are represented by the black circle; but this venn diagram is just a heuristic tool, so there is no need to be precise.) The same goes for the situation when $Y$ is regressed on $Z$ along. 
+
+But when we "hold $Z$ constant," we are, so to say, not using the variation in $Z$ when considering the relationship between $Y$ and $X$. Thus, the regression coefficient of $X$ in a multiple regression of $Y$ on $X$ *and* $Z$, must be represented by the shared area of $X$ and $Y$ *minus* that which is also shared with $Z$. Similarly, the regression coefficient on the variable $Z$ would represent the shared area between $Y$ and $Z$ *minus* that which is also shared with $X$. This is also the reason why the coefficients in multiple regressions are said to represent the association between an predictor and the outcome **after partialling out the associations with the control variables.**
+
+So, when we run a multiple regression of $Y$ on $X$ and $Z$, and look only at the coefficients, we would be not interpreting the area where the variances of all three variables overlap. This is often what we want, but can sometimes lead to problems. For example, consider the following situation:
+```{r, echo = F, fig.width = 3, fig.height = 3}
+grid.newpage()
+overrideTriple = T
+venn_plot = draw.triple.venn(
+    area1 = 40,
+    area2 = 30,
+    area3 = 30,
+    n12 = 25,
+    n23 = 8,
+    n13 = 15,
+    n123 = 5,
+    category = c("X", "Z", "Y"),
+    cex = 0,
+    lwd = 1,
+    col = rep("white", 3),
+    fill = viridis::inferno(3, end = .8),
+    cat.cex = rep(2, 3),
+    cat.col = viridis::inferno(3, end = .8),
+    cat.dist = rep(.1, 3)
+)
+```
+Here $Z$ *is* correlated with $Y$ and *might* be even more theoretically relevant for explaining $Y$. But as all its co-variation with $Y$ is shared with $X$, we won't be able to detect any meaningful association between $Z$ and $Y$ in a multiple regression. Sometimes these phenomena are explaianed as $X$ *mediating* the effect of $Z$ on $Y$. Yet, whether this is indeed the case requires some additional things to consider, which we won't be covering in this class.
+
+Another situation that we might encounter in regression analysisis the following:
+```{r, echo = F, fig.width = 3, fig.height = 3}
+grid.newpage()
+overrideTriple = T
+
+venn_plot = draw.triple.venn(
+    area1 = 40,
+    area2 = 30,
+    area3 = 30,
+    n12 = 7,
+    n23 = 8,
+    n13 = 15,
+    n123 = 0,
+    category = c("X", "Z", "Y"),
+    cex = 0,
+    lwd = 1,
+    col = rep("white", 3),
+    fill = viridis::inferno(3, end = .8),
+    cat.cex = rep(2, 3),
+    cat.col = viridis::inferno(3, end = .8),
+    cat.dist = rep(.1, 3)
+)
+```
+
+Here $X$ and $Z$ are correlated with each other and both are correlated with the outcome; but the variance that each of them share with $Y$ is disjoint. So, we would have a situation in which the coefficients from a multiple regression would be exactly the same as those from two separate simple linear regressions, where $Y$ is regressed on $X$ and $Z$ in turn.
+
+<br>
+
+# The Frish-Waugh Theorem
+
+This reasoning about shared variance and the interpretation of regression coefficients is the basis of a very important theorem on linear regression: namely, the **Frish-Waugh Theorem**.
+
+Let us first go back to our first venn diagram, reproduced below:
+
+```{r, echo = F, message = F, fig.width = 3, fig.height = 3}
+library("VennDiagram")
+
+grid.newpage()
+
+overrideTriple = T
+
+venn_plot = draw.triple.venn(
+    area1 = 40,
+    area2 = 30,
+    area3 = 30,
+    n12 = 7,
+    n23 = 8,
+    n13 = 15,
+    n123 = 5,
+    category = c("X", "Z", "Y"),
+    cex = 0,
+    lwd = 1,
+    col = rep("white", 3),
+    fill = viridis::inferno(3, end = .8),
+    cat.cex = rep(2, 3),
+    cat.col = viridis::inferno(3, end = .8),
+    cat.dist = rep(.1, 3)
+)
+```
+and let us simulate a dataset that corrsponds to the plot:
+```{r}
+# load data.table library & set seed
+library("data.table")
+set.seed(123)
+
+# sample size
+n = 2000
+
+# variances for x and z (z has smaller variance than z)
+vars = c(1, .7)
+
+# correlation between x and z (approximately, .2)
+cor_xz = 0.2
+
+# generate correlated x and z
+# note: you don't have to understand this step!
+Omega = diag(2)
+Omega[1, 2] = Omega[2, 1] = cor_xz
+X = MASS::mvrnorm(
+  n, 
+  mu = c(0, 0), 
+  Sigma = diag(vars) %*% Omega %*% diag(vars)
+)
+
+# check correlation
+cor(X)
+
+# regression coefficients
+beta = c(1, .8)
+
+# error
+e = rnorm(n, 0, 1.5)
+
+# generate outcome via regression equation
+y = .25 + beta[1] * X[, 1] + beta[2] * X[, 2] + e
+
+# generate observed dataset
+dat = data.table(y = y, x = X[, 1], z = X[, 2])
+```
+
+Let us have a look at the estimated coefficients:
+
+```{r}
+# fit and print regression
+multi_fit = lm(y ~ x + z, data = dat)
+print(multi_fit)
+
+# store regression results
+multi_coef = coef(multi_fit)
+```
+
+
+Now, to obtain the regression coefficient of `x`, we can rely on the following procedure.
+
+The first step is to fit a simple linear regression of $X$ on $Z$.
+```{r}
+# regress x on z
+fit_xz = lm(x ~ z, data = dat)
+```
+This will give us both predicted values and residuals, the sum of which will perfectly fit every response: i.e.,
+$$ \begin{aligned}
+x_i &= \hat\beta_0 + \hat\beta_1 z_i &+ \hat\epsilon_i \\
+&=\hat x_i &+ \hat \epsilon_i 
+\end{aligned}$$
+for $i = 1,2,...,n$. Furthermore, by construction, the covariance between the vector of predicted values, $\mathbf{\hat x}_z$ and the vector of residuals, $\mathbf{\hat \epsilon}_x$ will be zero. We might check this as follows:
+```{r}
+# add predicted values to dataset
+dat[, pred_x := predict(fit_xz)]
+# add residuals to dataset
+dat[, ehat_x := x - pred_x]
+# check covariance
+dat[, cov(pred_x, ehat_x)]
+```
+This implies that 
+
+$$\widehat{\text{Var}}[x_i] = \widehat{\text{Var}}[\hat x_i] + \widehat{\text{Var}}[\hat\epsilon_i].$$
+
+To return to the venn diagram, the vector $\mathbf{\hat x}^{(z)}$ can be understood as reflecting the portion of the shared variance of $X$ and $Z$; the residual vector, $\mathbf{\hat \epsilon}^{(x)}$, on the other hand, represents the portion of the variance in $X$ that is *not* shared with $Z$. In other words, the vector $\mathbf{\hat \epsilon}^{(x)}$ would correspond to the black region in the venn diagram below:
+```{r, echo = F, fig.width = 3, figh.height = 3}
+overrideTriple = T
+grid.newpage()
+venn_plot = draw.pairwise.venn(
+  area1 = 40, area2 = 30, cross.area = 7, 
+  category = c("X", "Z"),
+  col = rep("white", 2),
+  cex = 0, 
+  lwd = 1, 
+  fill = c("black", viridis::inferno(1, begin = .4)),
+  cat.cex = rep(2, 2),
+  cat.col = c("black", viridis::inferno(1, begin = .4)),
+  alpha = c(1, .5)
+  )
+```
+So, if we regress $y_i$ on $\hat \epsilon_{i}^{(x)}$, as our second step in the procedure, we would use only the variation in $X$ that remains after the proportion that co-varies with $Z$ is partialled out. Hence, the regression coefficient should capture exactly the same variation that is captured by a multiple regression in which both $X$ and $Z$ are entered as covariates.
+
+Let's check this:
+```{r}
+# regress y on ehat
+fit_ye = lm(y ~ ehat_x, data = dat)
+
+# get coefficients
+coef_twostep = coef(fit_ye)
+
+# compare with multiple regresion results
+print(c(multi_coef[2], coef_twostep[2]))
+```
+Which are the same!
+
+
+>So, here is the two-step procedure to obtain the regression coefficient of `x` in a multiple regression of the form `y ~ x + z`.
+>
+> 1. First step: regress `x ~ z` and store the residuals of this regression, `e`
+> 2. Second step: regress `y ~ e`. The coefficient on `e` will be the same as the coefficient on `x` from the multiple regression.
+
+This is the Frish-Waugh Theorem. The general case of the theorem is given in the appendix (and is by no means required for this course).
+
+But why should we care about this theorem. There are three reasons: 
+
+1. The first is about computation. The Frish-Waugh Theorem makes the comuptation of some models much easier. A well-known case is the fixed-effects model that you'll encounter later in the coures. Of course, this aspect is the *least* important one, unless your dream is to become a methodologist.
+
+2. The second is about interpretation. The theorem shows that we can interpret the regression coefficients of a *multiple* regression as a the regression coefficient of a *simple* linear regression where our outcome and our predictors are residuals. This makes clear what people mean when they say "partialling out" the effects of control variables.
+
+3. The third reason is about regression diagnostics. Suppose you have a multiple regression with 10 predictors. You are suspicious that your data has some influential observations that generates unreasonable results for a particular variable. How would you check whethe this is indeed true? While visualizing a 11-dimensional space is impossible, you can use the Frish-Waught Theorem to look at a two-dimensional plot that describes the relationship between the outcome and your predictor of interest, after the associations of other variables are "partialled out" or "controlled for."
+
+<br>
+
+# Frish-Waugh Theorem in Practice (Non-linearity)
+
+Let us discuss point 3. from above in more detail. I've prepared a dataset for you in which the theorem comes in handy. Let me also introduce you to a new function that will be useful: namely, the `map` function from the `purrr` package.
+
+To use this funtion, we have to install the `purrr` package. We will also install the `stargazer` package, which is useful in printing out regression results.
+```{r, eval = F}
+install.packages(c("purrr", "stargazer"))
+```
+Let us load the necessary packages and download the data:
+```{r, message = F}
+# attach packages
+library("here")
+library("data.table")
+library("purrr")
+
+# get url to dataset
+url = "https://raw.githubusercontent.com/baruuum/intro_to_stats_2019/master/data/lab5.csv"
+
+# read data
+dat = fread(url)
+```
+Let us first save this dataset in a directory `data` within the `Labs` folder, so that, whenever we do something wrong with our code, we can simply reload it:
+```{r}
+# create "data" directory within Labs (or your working) directory
+dir.create(here("data"))
+
+# save data into that directory
+fwrite(dat, here("data", "lab5.csv"))
+```
+
+Now, the first thing we want to check is the dimension of this dataset and the data type of the variables. To check the dimensions, we can just run the following:
+```{r}
+# check dimensions
+dim(dat)
+
+# check whether the dataset has any meaningful variable names
+names(dat)
+```
+
+Next, we check whether the variables are discrete or continuous and whether they consist of numbers or of characters, etc. To check this with one command, we can use the `map_chr` function together with the `class` function:
+```{r}
+map_chr(dat, class)
+```
+The `map_chr` function is a **functional**: it is a function that takes another function as its argument. In this case, the `map_chr` function takes each column of the `dat` object, applies the `class` function on that column, and returns the result as a `character` vector. We have used the `map_chr` function as we know in advance that the `class` function will return a `character` data type. If we are not sure which data type is returned or if we know that the data type will vary, we could have used the `map` function instead of `map_chr`, which will return a `list` object.
+```{r}
+map(dat, class)
+```
+There are different variants of the `map` function, such as `map_dbl`, `map_lgl`, and so on. Details on the `map` function and its variants can be found [here](https://purrr.tidyverse.org/reference/map.html).
+
+
+## Short Excurse on `list` objects
+
+This is probably the first time that you've encountered a `list` object. `list`s are very general object in R. You might think of it as a vector which contains other R objects, where these objects may *vary in type and dimensions*. 
+
+For example, you might create a list of two `vector`s, where the first is a `character` vector of length 2 and the second is a `numeric` vector of length 10. It would not be possible to create such a `matrix` out of two reasons: first, the lengths of the vectors are not the same (so you cannot `cbind/rbind` them into a matrix) and a `matrix` object has to consist of the same data type (it is impossible to have one column to be of data type `character` and anoher of type `numeric`). `list` objects don't have any of these restrictions.
+
+Elements of a `list` object can be accessed with double square brackets (``[[ ]]``). Here is a small example:
+
+```{r}
+# create a list
+mylist = list(1:10, "hello", matrix(1:4, nrow = 2))
+
+# add names to the list
+names(mylist) = c("int_seq", "hi", "mymat")
+
+# print the whole list
+mylist
+
+# extract the second element of the list by position or name
+mylist[[2]]
+mylist$hi
+```
+But there is something that might confuse you at first; namely, you can also extract elements using single brackets `[`, `]`!
+```{r}
+# subsetting using single brackets
+mylist[1]
+```
+But if you use a `vector` to subset a list, you'll get different results!
+```{r}
+# subsetting using a vector and single brackets
+mylist[1:2]
+# subsetting using a vector and double brackets
+mylist[[1:2]]
+```
+If you use single brackets, you will extract the first two elements of the list; if you use double bracktes, you will extract the second element of the first element of the list, i.e., `mylist[[1:2]]` is the same as `mylist[[1]][2]`. This might be confusing at first, but it will come handy in some situations. More details on subsetting lists and subsetting in general can be found [here](http://adv-r.had.co.nz/Subsetting.html). For now, whenever you subset a `list` object, I recommend that you use always double square brackets(``[[``).
+
+A last thing to note about `list`s is that `data.frame` or `data.table` objects are `list` objects as well. They are very specific types of lists, in that every element (read column) of a `data.table/data.frame` object has the same length. We can check whether this statemnt is indeed true:
+```{r}
+# check whether our data.table object is a list
+is.list(dat)
+```
+This suggests that we can use list operations on `data.table` objects as well:
+```{r}
+# use list subsetting methods on data.tables
+a = dat[[1]]
+
+# use more familiar operations on dat object to extract first column
+names(dat) # first column name is x1
+b = dat$x1
+
+# check whether objects are the same
+identical(a, b)
+```
+
+## Back to the Data
+
+Okay. Let us go back to the dataset and the Frish-Waugh Theorem. We have check that all variables are of the `numeric` type. Let us also check how many unique response categories each variable has. This is important since a dummy variable that takes on only the values `0` and `1` might be stored as a `numeric` variable. 
+
+```{r}
+# create function that counts unique values
+n_unique = function(w) { 
+  
+  return(length(unique(w))) 
+
+}
+
+# apply this function to each column of dat
+map_int(dat, n_unique)
+```
+
+Recall that our dataset had dimensions $100 \times 4$, so it seems that the variables are all continuous. 
+
+Now, suppose our theory suggests that `y` is generated by the variables `x1, x2, x3`. If we belive that the relationship between `y` and the predictors is linear, a multiple regression model would be the model we want to fit to the data.
+
+The R code to do so is the same as that for simple linear regression, except that we enter multiple variable names on the right-hand side of the `~` sign, separated by `+` signs:
+
+```{r}
+# fit multiple regression
+fit = lm(y ~ x1 + x2 + x3, data = dat)
+# print out summary
+summary(fit)
+```
+
+Wow. All of our variables are **significant!!!!!**. 
+
+>**EXERCISE** 
+> 
+>1. Interpret the coefficients of the model above. 
+>2. Interpret the R-squared value of the model.
+>3. What is the F-statistic testing?
+>4. What does the result of the F-test suggest?
+
+So, we might report these results as you've just interpreted them! 
+
+---
+
+**This is NOT(!) the way you should proceed in your analysis.**
+
+---
+
+Even though your "theory" predicts that `y` should increase with, say, `x1`, our theories in the social sciences are often not preciese enough to tell you the functional form. Nor are we always sure whether the theories are correct (we want to *test* them using our data, after all!)
+
+So, the first thing you want to do in **any** data analysis is to **look into the descriptive statistics.** In particular, you want to look into histograms of each of the variables and the scatter plots between your outcome and the predictor variables.
+
+As you already know how to create histograms, let focus here on the scatter plots (which you also know how to create, but which will be of importance to what follows):
+```{r, fig.width = 10}
+# set graphical parameters
+par(mfrow = c(1, 3))
+
+# scatter plots of predictors and y
+with(dat, plot(x1, y, pch = 19))
+with(dat, plot(x2, y, pch = 19))
+with(dat, plot(x3, y, pch = 19))
+```
+There seems to be something odd here. While the relationship between `x2`, `x3`, respectively with the outcome seems to be well-reflected in the multiple regression results, `x1` seems to have no relationship at all with the outcome!
+
+We can also add the regression lines to the plots:
+```{r, fig.width = 10}
+par(mfrow = c(1, 3))
+
+# scatter plots of predictors and y, with regression lines
+with(dat, plot(x1, y, pch = 19))
+abline(lm(y ~ x1, data = dat), col = "red")
+with(dat, plot(x2, y, pch = 19))
+abline(lm(y ~ x2, data = dat), col = "red")
+with(dat, plot(x3, y, pch = 19))
+abline(lm(y ~ x3, data = dat), col = "red")
+```
+Again, the regression lines suggest that there is *at best* a very weak relationship between the outcome and `x1`. So, what is going on here?
+
+Sometimes this can happen if you have a very large dataset. In these situations, even very, very small associations will be *statistically significant*. Here, however, we have something else going on: namely, the scatter plot shows the *unconditional* relationship between the outcome and each predictor, while the multiple regression model is all about *conditional* relationships. That is, the question answered by multiple regression is, heuristically speaking, "holding `x2` and `x3` constant, what is the relationship between `x1` and the outcome?" The plots we have created so far, on the hand, does *not* hold other variables constant at any values; it averages over them.
+
+So, what should we do? This is where the Frish-Waugh Theorem comes in. We residualize both `y` and `x1`, and plot the residuals against each other. This will show the *conditional* relationship between `y` and `x1` after the variations of `x2` and `x3` are partialled out.
+
+```{r, fig.width = 8, fig.height = 4}
+# fit a regression of x1 on x2 and x3 and save the residuals
+res_1 = resid(lm(x1 ~ x2 + x3, data = dat))
+# fit a regressinn of y on x2 and x3 and save the residuals
+res_y = resid(lm(y ~ x2 + x3, data = dat))
+
+# compare the scatter plot of (y, x1) and the plot of the residuals
+par(mfrow = c(1,2))
+with(dat, plot(x1, y, pch = 19, main = "Unconditional"))
+plot(res_1, res_y, pch = 19, 
+     main = "Conditional\n(adjusted for x2 and x3)",
+     xlab = "residualized x1",
+     ylab = "residualized y")
+```
+So, we now observe, that there is indeed a substantively meaningful positive relationship between `y` and `x1`, once `x2` and `x3` are "adjusted for." What is more, we observe that the relationship between `y` and `x1` might not be linear. Let us add a regression line for both a linear fit and a quadratic fit to the plot to see which one makes more sense:
+
+```{r, fig.width = 5, fig.height = 5}
+# compare the scatter plot of (y, x1) and the plot of the residuals
+par(mfrow = c(1,1))
+plot(res_1, res_y, pch = 19, 
+     main = "Conditional\n(adjusted for x2 and x3)",
+     xlab = "residualized x1",
+     ylab = "residualized y",
+     col = "darkgrey")
+
+# fit linear model
+fit_linear = lm(res_y ~ res_1)
+coefs_lin = coef(fit_linear)
+# add line to plot (same line as when using abline())
+curve(coefs_lin[1] + coefs_lin[2] * x, add = T, col = "red", lwd = 1)
+
+# fit quadratic model
+fit_quad = lm(res_y ~ res_1 + I(res_1^2))
+coefs_quad = coef(fit_quad)
+# add line to plot
+curve(coefs_quad[1] + coefs_quad[2] * x + coefs_quad[3] * x^2, 
+      add = T, col = "blue", lwd = 1)
+```
+
+Although the quadratic model seems to offer a better fit to the data, this will be **always** the case, as we are fitting more parameters to the same data. The question becomes whether we are following the noise in the data or the signal. To test this, we might return to the multiple regression model and add a quadratic term to it.
+
+```{r}
+# fit multiple regression with quadratic term for x1 added
+fit2 = lm(y ~ x1 + I(x1^2) + x2 + x3, data = dat)
+# print summary
+summary(fit2)
+```
+
+So, it seems that the addition of the quadratic term is justified. But there are additional considerations we make before reaching a firm conclusion. For example, we might ask, how much is the (apparently) curve-linear relationship between `y` and `x1` driven by single observations? Consider the single point at the lower-left corner of the last plot. How would the regression line (either linear or qudratic) look if we would drop this observation from our dataset? How would the regression lines look if we drop the observation at the lower-right corner? We can in fact check what will happen. So, let's do this.
+
+>**EXERCISE** Figure out which row of the dataset `dat` correspond to the 1) lower-left observation and the lower-right observation in the last plot we've created. Thereafter,
+> 
+> 1. Create a plot of the two regression lines where the lower-left observation is excluded; check whether the quadratic term `I(x1^2)` is still significant 
+> 2. Create a plot of the two regression lines where the lower-right observation is excluded; check whether the quadratic term `I(x1^2)` is still significant 
+> 3. Create a plot of the two regression lines where both are excluded; check whether the quadratic term `I(x1^2)` is still significant 
+>
+> These kind of analyses are somtimes called **robustness checks** (although in a real data-analysis you would do them more systematically). What do you conclude after running these robustness checks? Is the (partial) relationship between `y` and `x1` linear? or do you conclude that it's curve-linear?
+
+
+Lastly, to compare the different models, it is often useful to create a table of the estimated regression coefficeints. We might use the `stargazer` function of the `stargazer` package for this purpose. It will create a beautiful table with a single line of code:
+```{r, results="asis"}
+stargazer::stargazer(fit, fit2, type = "html", style = "all2")
+```
+We see from the table that adding the squared term of `x1` increases the R-squared of the model by approximately 0.10, which is quite a large amount. 
+
+Notice, that I've used the `type = "html"` option as I'm writing this document in html format. If you are using LaTeX, you can just drop that option, and `stargazer` will spit out the LaTeX code for the table. There are a lot of options you can specify in `stargazer` to customize your table. A useful cheetsheet can be found [here](https://www.jakeruss.com/cheatsheets/stargazer/) (I have never used this package before, but many people recommended it; so, I'm introducing it here.)
+
+
+<br><br>
+
+# Appendix: Derivation of the Frish-Waugh Theorem
+
+As the appendix in the previous document, **this part is by no means required** and is only left here as a reference point to which you might return in the future. It's a quite short and simple proof of why the Frish-Waugh Theorem works.
+
+Consider the regression model
+$$\mathbf{y} = \mathbf{X}\boldsymbol{\beta} + \boldsymbol{\epsilon} = \mathbf{X}_1\boldsymbol{\beta}_1 + \mathbf{X}_2\boldsymbol{\beta}_2 + \boldsymbol{\epsilon}.$$
+The coefficient vector $\boldsymbol{\beta}$ is estimated using the normal equations
+$$\mathbf{X'X} = \mathbf{X' y}$$
+which can be rewitten using our partitioned matrix as
+$$\begin{bmatrix} \mathbf{X}_1'\mathbf{X}_1 &\mathbf{X}_1'\mathbf{X}_2\\ \mathbf{X}_2'\mathbf{X}_1 & \mathbf{X}_2'\mathbf{X}_2\end{bmatrix}\begin{bmatrix} \boldsymbol{\beta}_1 \\ \boldsymbol{\beta}_2\end{bmatrix} = \begin{bmatrix} \mathbf{X}_1'\mathbf{y} \\ \mathbf{X}_2'\mathbf{y}\end{bmatrix}$$
+Using only the first equation, we get
+$$\mathbf{X}_1'\mathbf{X}_1\boldsymbol{\beta}_1 + \mathbf{X}_1'\mathbf{X}_2\boldsymbol{\beta}_2 = \mathbf{X}_1'\mathbf{y}$$
+and solving for $\boldsymbol{\beta}_1$, this yields
+$$\boldsymbol{\beta}_1 = (\mathbf{X}_1'\mathbf{X}_1)^{-1}(\mathbf{X}_1'\mathbf{y} -\mathbf{X}_1' \mathbf{X}_2\boldsymbol{\beta}_2). $$
+Similarly, the second equation yields
+$\mathbf{X}_2'\mathbf{X}_1\boldsymbol{\beta}_1 + \mathbf{X}_2'\mathbf{X}_2\boldsymbol{\beta}_2 = \mathbf{X}_2'\mathbf{y}.$ 
+Substituting $\boldsymbol{\beta}_1$ from the first equation into the second gives
+$$\begin{aligned}
+ \mathbf{X}_2'[\mathbf{I} - \mathbf{X}_1(\mathbf{X}_1'\mathbf{X}_1)^{-1}\mathbf{X}_1' ]\mathbf{X}_2\boldsymbol{\beta}_2  = \mathbf{X}_2'[\mathbf{I} - \mathbf{X}_1(\mathbf{X}_1'\mathbf{X}_1)^{-1}\mathbf{X}_1']\mathbf{y} 
+\end{aligned}$$
+implying that
+$$ \boldsymbol{\beta}_2  = (\mathbf{X}_2'\mathbf{M}_1\mathbf X_2)^{-1}\mathbf{X}_2'\mathbf{M}_1\mathbf{y}$$
+where $\mathbf{M}_1 = \mathbf{I} - \mathbf{X}_1(\mathbf{X}_1'\mathbf{X}_1)^{-1}\mathbf{X}_1'.$ 
+
+The matrix $\mathbf{M}_1$ is sometimes called the "residual maker" matrix as $\mathbf{M}_1\mathbf{y} = \mathbf{y} - \mathbf{X}_1\boldsymbol{\beta}_1 = \boldsymbol{\epsilon}_1$, which is the vector of residuals that are generated by regressing $\mathbf{y}$ on $\mathbf{X}_1$ (without including $\mathbf{X}_2$ in the model). As $\mathbf{M}_1$ is idempotent  (meaning that $\mathbf{M}_1\mathbf{M}_1 = \mathbf{M}_1$) and symmetric ($\mathbf{M}_1= \mathbf{M}_1'$), we have
+$$\boldsymbol{\beta}_2 = (\mathbf{\tilde X}_2' \mathbf{\tilde X}_2)^{-1}\mathbf{\tilde X}_2'\mathbf{\tilde y}$$
+where $\mathbf{\tilde X}_2 = \mathbf{M}_1\mathbf{X}_2$ and $\mathbf{\tilde y} = \mathbf{M}_2 \mathbf{y}$. 
+
+This shows that the sub-vector of regression coefficients, $\boldsymbol{\beta}_2$, from a multiple regression of $\bf y$ on $\mathbf{X}_1$ and $\mathbf X_2$ is equal to the vector regression coefficients obtained when the $\mathbf X_1$-residualized $\mathbf y$ (i.e., $\mathbf{\tilde y}$) is regressed on  the $\mathbf X_1$-residualized $\mathbf X_2$. 
+
+Notice that $\mathbf{\tilde X}_2'\mathbf{\tilde y} = (\mathbf{M}_1\mathbf{X}_2)'\mathbf{M}_1 \mathbf{y} = \mathbf{X}_2'\mathbf{M}_1 \mathbf{y} = \mathbf{\tilde X}_2'\mathbf{y}$. So, residualizing $\mathbf{y}$ might be omitted to obtain the coefficients.
