@@ -408,9 +408,10 @@ summary {
 <ul>
 <li><a href="#some-background-on-the-abortion-issue">Some Background on the Abortion Issue</a></li>
 <li><a href="#data-preparation">Data Preparation</a></li>
-<li><a href="#selecting-variables-to-use-in-the-analysis">Selecting Variables to Use in the Analysis</a></li>
+<li><a href="#constructing-the-outcome-variable">Constructing the Outcome Variable</a><ul>
 <li><a href="#creating-a-new-variable-equal-to-the-sum-of-yes-responses">Creating a New Variable Equal to the Sum of <code>yes</code> Responses</a></li>
 <li><a href="#creating-a-second-variable">Creating a Second Variable</a></li>
+</ul></li>
 <li><a href="#recoding-predictors">Recoding Predictors</a><ul>
 <li><a href="#party-identification">Party Identification</a></li>
 <li><a href="#gender-education">Gender &amp; Education</a></li>
@@ -488,9 +489,10 @@ class(gss_full)</code></pre>
 setDT(gss_full)
 class(gss_full)</code></pre>
 <pre><code>## [1] &quot;data.table&quot; &quot;data.frame&quot;</code></pre>
+<p><br></p>
 </div>
-<div id="selecting-variables-to-use-in-the-analysis" class="section level1">
-<h1>Selecting Variables to Use in the Analysis</h1>
+<div id="constructing-the-outcome-variable" class="section level1">
+<h1>Constructing the Outcome Variable</h1>
 <p>Since we are interested in the respondents’ attitudes on abortion, we need to figure out which items about abortion were asked in the 2018 GSS. In the year 2018, there were <em>two</em> batteries of questions on this topic. How I know this? Because I’ve looked into the <strong>codebook</strong> of the GSS. To spare you the time, open the codebook you’ve downloaded last time and go on to <strong>page 473</strong>.</p>
 <p>You’ll find a series of questions that start with the statement:</p>
 <p>“Please tell me whether or not you think it should be possible for a pregnant woman to obtain a legal abortion if …”</p>
@@ -517,9 +519,8 @@ class(gss_full)</code></pre>
 <blockquote>
 <p><strong>EXERCISE</strong> Say we count the number of <code>yes</code> responses to the series of questions. What would the resulting variable measure? Would this be a good measure? What would this variable fail to capture?</p>
 </blockquote>
-</div>
-<div id="creating-a-new-variable-equal-to-the-sum-of-yes-responses" class="section level1">
-<h1>Creating a New Variable Equal to the Sum of <code>yes</code> Responses</h1>
+<div id="creating-a-new-variable-equal-to-the-sum-of-yes-responses" class="section level2">
+<h2>Creating a New Variable Equal to the Sum of <code>yes</code> Responses</h2>
 <p>Let us first create a <code>character</code> vector of the abortion items:</p>
 <pre class="r"><code># save abortion items
 ab_names = c(&quot;abdefect&quot;, &quot;abnomore&quot;, &quot;abhlth&quot;,
@@ -665,8 +666,8 @@ ggplot(
 <li>Second, <strong>most survey data will not be simple random samples from the population</strong>. Instead, they use complex sampling designs that <em>might</em> result in unequal probabilities of individuals to be selected into the sample. In addition, many individuals who are selected into the sample will simply refuse to respond to the survey, which might create biases in our estimates. The best that survey organizations can do is to provide <strong>weights</strong> that adjust for unequal inclusion probabilities and non-response patterns. So, all survey analyses should be weighted by the weight variables that are provided together with the dataset. The GSS has such weight variables as well; how to incorporate these weights will not be discussed in this course, however. For now, the important point is not to trust these results too much (although I believe that the weighted percentages will be quite similar to the unweighted; but, who knows?)</li>
 </ol>
 </div>
-<div id="creating-a-second-variable" class="section level1">
-<h1>Creating a Second Variable</h1>
+<div id="creating-a-second-variable" class="section level2">
+<h2>Creating a Second Variable</h2>
 <p>Next, look into <strong>page 2778</strong> of the codebook, where you’ll a set of abortion attitude items that were newly fielded in 2018.</p>
 <p>We will focus on the following two questions</p>
 <ul>
@@ -749,6 +750,7 @@ gss_full[, table(notyou_ab, sex)]</code></pre>
 ##          0  464   0
 ##          1  423   0</code></pre>
 <p>So, it seems that our hunch was right (and I can assure you that it is indeed the way in which the questions were administrated). We will not use this variable in the analysis that follows. Instead, let us prepare some predictor variables for the analysis.</p>
+</div>
 </div>
 <div id="recoding-predictors" class="section level1">
 <h1>Recoding Predictors</h1>
@@ -840,6 +842,16 @@ gss_full[, table(is.na(income16), is.na(fam_inc))]</code></pre>
 <p>It is often convenient to deal with the logarithm of income rather than the raw-income. So, let us also create a log-family income variable:</p>
 <pre class="r"><code>gss_full[, log_inc := log(fam_inc)]</code></pre>
 <p>With this the preparation of our variables is complete.</p>
+<blockquote>
+<p><strong>EXERCISE</strong></p>
+<ol style="list-style-type: decimal">
+<li>What other variables would be important in predicting abortion attitudes?</li>
+<li>Let <span class="math inline">\(Z\)</span> be a variable that was not included in our model. If <span class="math inline">\(Z\)</span> is correlated with the outcome but not with the predictor variables in our model, how would omitting <span class="math inline">\(Z\)</span> influence our regression results?</li>
+<li>If <span class="math inline">\(Z\)</span> is correlated with any of the predictors but not with the outcome, how would omitting <span class="math inline">\(Z\)</span> influence our regression results?</li>
+<li>If <span class="math inline">\(Z\)</span> is correlated with both the outcome and <code>pid</code> (but not the other variables), how would omitting <span class="math inline">\(Z\)</span> influence our regression results?</li>
+</ol>
+</blockquote>
+<p><br></p>
 </div>
 </div>
 <div id="saving-the-recoded-dataset" class="section level1">
