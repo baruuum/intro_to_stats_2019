@@ -16,7 +16,7 @@ If you find any errors or typos, or anything you want to add, please shoot me a 
 4. Conditional Means and Simple Linear Regression, Fitting Linear Regression Models in R
 5. Multiple Linear Regression I: Interpretation of Regression Coefficients, the Frish-Waugh Theorem
 6. Multiple Linear Regression II: Data Preparation for a Concrete Data Analysis Example
-7. Multiple Linear REgression III: Fitting Multiple Regression Models to Data, Interaction Effects, Heteroskedasticity-robust Covariance Matrix Estimation.
+7. Multiple Linear Regression III: Fitting Multiple Regression Models to Data, Interaction Effects, Heteroskedasticity-robust Covariance Matrix Estimation.
 
 # Assignments
 
