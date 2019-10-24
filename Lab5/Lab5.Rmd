@@ -1,5 +1,5 @@
 ---
-title: "Lab5 - Multiple Regression"
+title: "Lab5 - Multiple Regression I"
 author: "Barum Park"
 date: "10/11/2019"
 output: 
