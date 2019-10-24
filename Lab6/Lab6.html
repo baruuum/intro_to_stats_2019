@@ -407,8 +407,7 @@ summary {
 <div id="TOC">
 <ul>
 <li><a href="#some-background-on-the-abortion-issue">Some Background on the Abortion Issue</a></li>
-<li><a href="#step-i-data-preparation">Step I: Data Preparation</a><ul>
-<li><a href="#loading-the-data">Loading the Data</a></li>
+<li><a href="#data-preparation">Data Preparation</a></li>
 <li><a href="#selecting-variables-to-use-in-the-analysis">Selecting Variables to Use in the Analysis</a></li>
 <li><a href="#creating-a-new-variable-equal-to-the-sum-of-yes-responses">Creating a New Variable Equal to the Sum of <code>yes</code> Responses</a></li>
 <li><a href="#creating-a-second-variable">Creating a Second Variable</a></li>
@@ -418,7 +417,6 @@ summary {
 <li><a href="#family-income">Family Income</a></li>
 </ul></li>
 <li><a href="#saving-the-recoded-dataset">Saving the Recoded Dataset</a></li>
-</ul></li>
 </ul>
 </div>
 
@@ -460,16 +458,14 @@ h3 { font-size: 20px; }
 <p>In the pre-1970 period, most U.S. citizens were against abortion rights. This slowly changed over the next decade and aggregate opinion on the abortion issue liberalized consistently. The liberal trend stalled, however, in the late 70s to the early 80s. From there on, Republicans became more conservative over time, while Democrats kept becoming more liberal. Today, abortion is believed by many to be “the” polarizing issue. Furthermore, the recent changes in the Supreme Court, and conservatives’ efforts to overturn <em>Roe v. Wade</em>, is increasing the salience of the abortion debate.</p>
 <p><br></p>
 </div>
-<div id="step-i-data-preparation" class="section level1">
-<h1>Step I: Data Preparation</h1>
+<div id="data-preparation" class="section level1">
+<h1>Data Preparation</h1>
 <p>In today’s lab we’ll split our R code into two parts. One for the preparation of the data and the other for the analysis of the data.</p>
 <p>So, let us start by opening a new R script that we save in the directory <code>working_directory/Lab6/Lab6_data_preparation.R</code>.</p>
 <p>Before going into the analysis, let us install two new packages that we’ll use today:</p>
 <pre class="r"><code># install new packages
 install.packages(c(&quot;dplyr&quot;, &quot;dtplyr&quot;))</code></pre>
 <p>The <code>dplyr</code> package is a widely used package for data manipulations, while the <code>dtplyr</code> package is used so that <code>dplyr</code> functions “play nicely” with <code>data.table</code> objects.</p>
-<div id="loading-the-data" class="section level2">
-<h2>Loading the Data</h2>
 <p>We first attache the packages we are going to use:</p>
 <pre class="r"><code># load packages to use
 library(&quot;here&quot;)
@@ -493,8 +489,8 @@ setDT(gss_full)
 class(gss_full)</code></pre>
 <pre><code>## [1] &quot;data.table&quot; &quot;data.frame&quot;</code></pre>
 </div>
-<div id="selecting-variables-to-use-in-the-analysis" class="section level2">
-<h2>Selecting Variables to Use in the Analysis</h2>
+<div id="selecting-variables-to-use-in-the-analysis" class="section level1">
+<h1>Selecting Variables to Use in the Analysis</h1>
 <p>Since we are interested in the respondents’ attitudes on abortion, we need to figure out which items about abortion were asked in the 2018 GSS. In the year 2018, there were <em>two</em> batteries of questions on this topic. How I know this? Because I’ve looked into the <strong>codebook</strong> of the GSS. To spare you the time, open the codebook you’ve downloaded last time and go on to <strong>page 473</strong>.</p>
 <p>You’ll find a series of questions that start with the statement:</p>
 <p>“Please tell me whether or not you think it should be possible for a pregnant woman to obtain a legal abortion if …”</p>
@@ -522,8 +518,8 @@ class(gss_full)</code></pre>
 <p><strong>EXERCISE</strong> Say we count the number of <code>yes</code> responses to the series of questions. What would the resulting variable measure? Would this be a good measure? What would this variable fail to capture?</p>
 </blockquote>
 </div>
-<div id="creating-a-new-variable-equal-to-the-sum-of-yes-responses" class="section level2">
-<h2>Creating a New Variable Equal to the Sum of <code>yes</code> Responses</h2>
+<div id="creating-a-new-variable-equal-to-the-sum-of-yes-responses" class="section level1">
+<h1>Creating a New Variable Equal to the Sum of <code>yes</code> Responses</h1>
 <p>Let us first create a <code>character</code> vector of the abortion items:</p>
 <pre class="r"><code># save abortion items
 ab_names = c(&quot;abdefect&quot;, &quot;abnomore&quot;, &quot;abhlth&quot;,
@@ -669,8 +665,8 @@ ggplot(
 <li>Second, <strong>most survey data will not be simple random samples from the population</strong>. Instead, they use complex sampling designs that <em>might</em> result in unequal probabilities of individuals to be selected into the sample. In addition, many individuals who are selected into the sample will simply refuse to respond to the survey, which might create biases in our estimates. The best that survey organizations can do is to provide <strong>weights</strong> that adjust for unequal inclusion probabilities and non-response patterns. So, all survey analyses should be weighted by the weight variables that are provided together with the dataset. The GSS has such weight variables as well; how to incorporate these weights will not be discussed in this course, however. For now, the important point is not to trust these results too much (although I believe that the weighted percentages will be quite similar to the unweighted; but, who knows?)</li>
 </ol>
 </div>
-<div id="creating-a-second-variable" class="section level2">
-<h2>Creating a Second Variable</h2>
+<div id="creating-a-second-variable" class="section level1">
+<h1>Creating a Second Variable</h1>
 <p>Next, look into <strong>page 2778</strong> of the codebook, where you’ll a set of abortion attitude items that were newly fielded in 2018.</p>
 <p>We will focus on the following two questions</p>
 <ul>
@@ -754,11 +750,11 @@ gss_full[, table(notyou_ab, sex)]</code></pre>
 ##          1  423   0</code></pre>
 <p>So, it seems that our hunch was right (and I can assure you that it is indeed the way in which the questions were administrated). We will not use this variable in the analysis that follows. Instead, let us prepare some predictor variables for the analysis.</p>
 </div>
-<div id="recoding-predictors" class="section level2">
-<h2>Recoding Predictors</h2>
+<div id="recoding-predictors" class="section level1">
+<h1>Recoding Predictors</h1>
 <p>Let us focus on the following predictors: party identification, gender, education, and income.</p>
-<div id="party-identification" class="section level3">
-<h3>Party Identification</h3>
+<div id="party-identification" class="section level2">
+<h2>Party Identification</h2>
 <p>Search the codebook for the variable <strong>partyid</strong>. When we look into the table this variable, we see that the value <code>7</code>, which stands for “Other party, refused to say” is not coded as missing.</p>
 <pre class="r"><code># check frequency on partyid
 table(gss_full$partyid)</code></pre>
@@ -783,8 +779,8 @@ gss_full[, table(pid, partyid, useNA = &quot;ifany&quot;)]</code></pre>
 ##   6      0   0   0   0   0   0 255   0    0
 ##   &lt;NA&gt;   0   0   0   0   0   0   0  77   33</code></pre>
 </div>
-<div id="gender-education" class="section level3">
-<h3>Gender &amp; Education</h3>
+<div id="gender-education" class="section level2">
+<h2>Gender &amp; Education</h2>
 <blockquote>
 <p><strong>EXERCISE</strong></p>
 <ol style="list-style-type: decimal">
@@ -802,8 +798,8 @@ gss_full[, table(pid, partyid, useNA = &quot;ifany&quot;)]</code></pre>
 ##       0  262 1178  196    0    0
 ##       1    0    0    0  465  247</code></pre>
 </div>
-<div id="family-income" class="section level3">
-<h3>Family Income</h3>
+<div id="family-income" class="section level2">
+<h2>Family Income</h2>
 <p>Here it gets a little bit messy. Search the codebook for the variable <strong>income16</strong>. You’ll see that it was measured using 27 categories and, hence, it is a discrete variable. To use it as a continuous variable, we assign the midpoint of each response category to a new variable named <code>fam_inc</code>, and use this as our income variable. Notice that there are two top-coded categories in this variable, “$150,000 and over” and “$170,000 or over”. We assign the arbitrary values 160,000 and 200,000 respectively to them.</p>
 <pre class="r"><code># create family income variable
 gss_full[income16 == 1, fam_inc := 500]
@@ -846,8 +842,8 @@ gss_full[, table(is.na(income16), is.na(fam_inc))]</code></pre>
 <p>With this the preparation of our variables is complete.</p>
 </div>
 </div>
-<div id="saving-the-recoded-dataset" class="section level2">
-<h2>Saving the Recoded Dataset</h2>
+<div id="saving-the-recoded-dataset" class="section level1">
+<h1>Saving the Recoded Dataset</h1>
 <p>At this point, it is a good idea to save the dataset. As we have already a <code>working_directory/data</code> directory, let us save the data there.</p>
 <pre class="r"><code>fwrite(gss_full, here(&quot;data&quot;, &quot;Lab6dat.csv&quot;))</code></pre>
 <p>Also, it is a good idea to leave some memos in your R script. For example, if your script started with</p>
@@ -865,7 +861,6 @@ gss_full[, table(is.na(income16), is.na(fam_inc))]</code></pre>
 ### 2) data set contains the original 2018 GSS variables in 
 ###    addition to the recoded variables</code></pre>
 <p>so that you will know immediately what you’ve done in this script when you come back after three month or so (probably next week).</p>
-</div>
 </div>
 
 
