@@ -1,0 +1,682 @@
+---
+title: "Lab7 - Multiple Regression III"
+author: "Barum Park"
+date: "10/25/2019"
+output: 
+    html_document:
+        keep_md: false
+        matjax: default
+        theme: yeti
+        highlight: textmate
+        toc: true
+---
+
+<style type="text/css">
+
+body{ 
+
+    font-size: 16px;
+    line-height: 1.7em;
+
+}
+
+blockquote {
+    padding: 10px 20px;
+    margin: 0 0 20px;
+    font-size: 16px;
+    border: solid 1px;
+}
+
+h1 { font-size: 32px; }
+
+h2 { font-size: 24px; }
+
+h3 { font-size: 20px; }
+
+.nobullet li {
+  list-style-type: none;
+}
+
+</style>
+
+<br>
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, 
+                      cache = FALSE,
+                      fig.align = "center",
+                      fig.width = 4.5,
+                      fig.height = 4,
+                      letina = TRUE)
+```
+
+This week, we'll continue on the data analysis we started last week. So far, we have recoded a set of variables in the 2018 dataset to create our dependent variable and some predictors. Recall that we've also saved the dataset. So, today, we start by loading the dataset that we've been working so far.
+
+To continue our analysis, create a new script named `Lab7_regression.R` and save it into `your_working_directory/Lab7`. Start the script with the usual notes.
+
+Again, we will have to attach the packages that we need. So our script should start with:
+```{r, eval = T, message = F}
+library("here")
+library("purrr")
+library("dplyr")
+library("data.table")
+library("dtplyr")
+library("ggplot2")
+library("stargazer")
+```
+
+<br>
+
+# Additional Data Manipulations
+
+The first thing we'll do is to load our data. But, this time, let us load only those columns that we'll use in the analysis. This can be done with the `select` option of the `fread` function:
+```{r}
+dat = fread(
+  here("data", "Lab6dat.csv"),
+  select = c("ab_count_new", 
+             "pid", 
+             "log_inc", 
+             "female", 
+             "college")
+)
+```
+
+### Renaming the Columns of `data.table` objects
+
+As we have loaded only five variables, out of which only one pertains to abortion, let us give it a new name (`ab_count_new` is quite long, which can become annoying when you have to refer to the variable repeatedly.) First, let us rename this variable as `tmp_name` for the sake of demonstrating how variable names can be changed. This can be done with the `setnames` function:
+```{r}
+# rename variable ab_count_new to tmpname
+setnames(dat, "ab_count_new", "tmp_name")
+
+# check names of the dataset
+names(dat)
+```
+
+You can also rename multiple variables simultaneously
+```{r}
+# recode tmp_name -> abortion and pid -> party_id
+setnames(dat, c("tmp_name", "pid"), c("abortion", "party_id"))
+
+# check names
+names(dat)
+```
+or set the column names of the whole `data.table` using a single character vector:
+
+```{r}
+setnames(
+  dat, 
+  c("abortion", "pid", "linc", "female", "college")
+)
+
+# check names
+names(dat)
+```
+When assigning multiple variables simultaneously, be very careful about the order. If you had used `c("abortion", "pid", "linc", "college", "female")` in the last statement, for example, the original college variable would now have the name `female` and the original female variable would have the name `college`. As both of these variables are dummy coded, it might take you a while to figure out what went wrong after getting unreasonable results.
+
+
+### Summarizing Columns for Subgroups of a `data.table` using the `by` option
+
+As our research question is about the gender difference in abortion attitudes, let us have a look into the mean difference on the abortion scale across the two genders:
+```{r}
+# get means for male and female respondents
+dat[, mean(abortion, na.rm = T), by = female]
+```
+We see that women have, on average, a lower score on the abortion scale compared to men. This means that, on average, women tend to be more conservative on the scale.
+
+This is the first time that we've used the `by` option in a `data.table` object. This option will split the data based on the unique values of the variable in the `by` argument. In this case, it will split the data into two parts: those rows for which `female == 0` and those for which `female == 1`. Thereafter, it will apply the function `mean(abortion, na.rm = T)` to each of these parts of the data. Hence, we get the mean of male respondents (`female == 0`) and the mean of female respondents (`female == 1`) on the abortion scale as a result. 
+
+There are a lot of other things you can do with the `by` option:
+
+1. Notice that the calculated means are, by default, returned as a column named `V1`. To assign names to the new column, we have to wrap the expression into a list (as `data.frames`/`data.tables` are `list`s of vectors with the same length):
+```{r}
+# get means for male and female respondents and name new var
+dat[, list(mean_ab = mean(abortion, na.rm = T)), by = female]
+# you cans also use the alias .() for the list argument
+dat[, .(mean_ab = mean(abortion, na.rm = T)), by = female]
+```
+2. We can also summarize calculate the average abortion attitude for subsets defined by another variable. For example, we can summarize our outcome by education:
+```{r}
+# get mean on abortion scale by education
+dat[, mean(abortion, na.rm = T), by = college]
+```
+2. Or, we can to the same for combinations of variables
+```{r}
+# get mean on abortion scale by education and gender
+dat[, mean(abortion, na.rm = T), by = list(college, female)]
+```
+where we note that the two conditioning variables are entered as a `list` object.
+3. Or, we might summarize multiple variables at once
+```{r}
+# get average abortion score and the variance of pid by education
+dat[
+    , .(ab_mean = mean(abortion, na.rm = T),
+        pid_var = var(pid, na.rm = T)),
+    by = college]
+```
+    Notice that we've calculated the mean of the `abortion` variable and the variance of the `pid` variable. In general, you can use any other summary statistics for these tasks, not only the mean or the variance. The important point is that the summary function returns a scalar.
+    
+### Chaining `data.table` expressions
+
+As abortion attitudes are usually highly correlated with partisanship, let us look a little bit closer into the mean abortion scores by party identification:
+```{r}
+dat[, .(mean_ab = mean(abortion, na.rm = T)), by = pid]
+```
+This result is not easy to read, since the `pid` values are not ordered. We can order them subsequently by **chaining** `data.table` expressions as in the following:
+
+```{r}
+# get mean on abortion scale by pid & reorder
+dat[, .(mean_ab = mean(abortion, na.rm = T)), by = pid][order(pid)]
+```
+Now it is clear that respondents with stronger identification with the Republican party (recall that `0` stands for Strong Democrat and `6` for Strong Republican) have on average more conservative attitudes on abortion.
+
+Notice the code I've used. Right after closing the brackets for the first `data.table` expression, I've immediately opened a new set of brackets. When you do this, R will recognize that you want to apply the second expression on the resulting `data.table` of the first expression. So, after calculating the means on the abortion scales by party identification, we reorder the resulting `data.table` by the values of the `pid` variable. Sometimes it is useful to add line breaks, so that the chaining structure becomes clearer:
+
+```{r}
+# get mean on abortion scale by pid & reorder
+dat[
+    , .(mean_ab = mean(abortion, na.rm = T)), by = pid
+][
+    order(pid)
+]
+```
+The important point to keep in mind is that you have to open a new set of square brackets *immediately after closing* the previous ones. 
+
+You can chain as many expressions as you want. We could go on, for example, to do something like the following:
+```{r}
+dat[ # mean abortion score by pid
+    , mean(abortion, na.rm = T), by = pid
+][ 
+    # reorder rows based on pid
+    order(pid)
+][ 
+    # show only means for non-missing pid values
+    !is.na(pid)
+]
+```
+
+### Factor variables in R
+
+Before going into fitting models to the data, there is one more thing that we need to discuss to effectively deal with categorical data: namely, `factor` variables. 
+
+By default, variables in `data.table`/`data.frame`s are stored as `numeric` values or `character` values. For example, our `female` variable takes on the values `0` and `1`, and R has no idea what these values mean except that they are numbers (only *we* know that `0` stands for Male and `1` for Female). 
+
+If the `female` variable would be of a `character` data type, we would have something like `"Male"` and `"Female"`. This is often enough, but sometimes we want to order the categories, so that `"Female"` comes always before `"Male"` when we print the values of the `female` variable either in our console or in graphics. 
+
+When we use a `factor` variables, we can tell R explicitly that our `female` is a categorical variable and that it should be interpreted as such and, further, we can tell R that the category "Female" (`female == 1`) should come before the "Male" category (`female == 0`). We will not convert our `female` variable into a `factor` right now, as keeping this variable as it is has some advantages (e.g., `mean(female)` will give us the proportion of female respondents in our sample). But let me give you a simple example of using `factors` in R. 
+
+Consider the following vector of integers and suppose that `10` stands for the color "red", `2` for "blue", and `31` for "green"
+```{r}
+x = sample(c(10, 2, 31), 10, replace = T)
+print(x)
+```
+By itself, the object `x` is nothing but a set of numbers and R has no way to know that these numbers are referring to colors. We can turn this into a `factor` to make the connection clear:
+```{r}
+x_fact = factor(x, 
+                levels = c(10, 2, 31), 
+                labels = c("red", "blue", "green")
+         )
+print(x_fact)
+```
+We take `x` as the first argument, tell that this object has three categories, `c(10, 2, 31)`, and that these categories should be labeled `c("red", "blue", "green")`. When printing the factor, we see that for every place in which there was a `10`, we get now a `red` and this is the same for `2` (`blue`) and `31` (`green`). 
+
+When cross-tabulating `x` with `x_fact` we get
+```{r}
+table(x, x_fact)
+```
+While `2` is the smallest number in `x`, we have entered it in the second place in our `levels` argument. So, in the resulting factor variable, it will come as the second label, namely `blue`. We could also have specified the levels as `c(31, 2, 10)`, so that `green` becomes our first category. While the ordering is often not very important, it is very convenient when plotting graphs. By changing the order of categories in `factor` variables, we can, for example, control the order of the legend or the order of the x-axis (if the x-axis represents categorical variables).
+
+<br>
+
+# Fitting Regression Models
+
+We know already how to fit multiple regression models to data. The only thing that is different this time is that the data contains missing values, as a quick look into the dataset will reveal:
+
+```{r}
+dat
+```
+
+By default, if we run a regression model on this dataset, R will throw out all rows of the dataset that has at least one missing value on any of the variables that are included in the model.
+
+So, if we fit the regression equation
+$$\text{Model 0}:\quad  Y_i = \beta_0 + \beta_{1}\text{Fem}_i + \epsilon_i$$
+to the data
+```{r}
+# null model, simple linear regression of abortion on female
+m0 = lm(abortion ~ female, data = dat)
+```
+all rows of the dataset `dat` that were missing on either `abortion` or `female` will not be included in the analysis.
+
+Let us have a look into the results:
+
+```{r}
+summary(m0)
+```
+We see that the results indicate that `785` observations were deleted due to missingness. Considering that our dataset has `r nrow(dat)` observations in total, this is a very large number (almost one third). If you see so many missing values, you should be suspicious about your code or the data. In this case, the large number of missing values stems from the fact that only two-third of the respondents were asked the abortion questions to begin with (the GSS often uses split-designs where some of the respondents are asked one set of questions and other respondents another set.)
+
+>**EXERCISE** Interpret the regression coefficients, the standard errors, the t-statistics, and the p-value of the table. Interpret the F-statistic and its p-value as well.
+
+Next, let us add the rest of the variables as covariates into the model. We'll fit the equation
+
+$$\text{Model 1:} \quad Y_i = \beta_0 + \beta_1\text{Fem}_i + \beta_2\text{Pid}_i + \beta_3\text{Col}_i + \beta_4 \log(\text{Inc}_i) + \epsilon_i $$
+
+```{r}
+# add covariates to the model
+m1 = lm(abortion ~ female + pid + college + linc, data = dat)
+
+# look into summary
+summary(m1)
+```
+
+>**EXERCISE** Interpret the regression coefficient of the `female` variable. Interpret the regression coefficient of the `linc` variable.
+
+Lastly, let us consider the possibility that the gender difference in abortion attitudes might change depending on the party identification of the respondents. This will lead us to interaction terms. The concrete model that we'll fit looks like the following:
+
+$$\begin{aligned}
+\text{Model 2:} \quad Y_i &= \beta_0 + \beta_1\text{Fem}_i + \beta_2\text{Pid}_i + \beta_{12} \left(\text{Fem}_i\times  \text{Pid}_i\right)  \\
+&\quad + \beta_3\text{Col}_i + \beta_4 \log(\text{Inc}_i) + \epsilon_i
+\end{aligned}$$
+
+We can fit this model by using the `*` operator. If you include `x * y` into your formula, both the variables `x` and `y` as well as their interaction `x:y` will be included into the model.
+
+```{r}
+# add ineteraction between female and party_id
+m2 = lm(abortion ~ female * pid + college + linc, data = dat)
+print(m2)
+```
+You can also manually add the interaction term as shown below:
+```{r}
+lm(abortion ~ female + pid + female:pid + college + linc, data = dat)
+```
+The two models will be the same. Let us have a look into the results:
+```{r}
+# look into summary
+summary(m2)
+```
+
+>**EXERCISE**
+>
+> 1. Interpret the `female` coefficient.
+> 2. Interpret the `party_id` coefficient.
+> 3. We see that the interaction terms `female:party_id` is significantly different from zero (assuming that we set the $\alpha$ level to 0.05 before running the analysis). What does this mean?
+
+Now, whenever your model becomes more complicated than a linear regression, it is often a good idea to plot the predicted responses in a plot in order to get an intuitive understanding your model.
+
+## Generating Tables of Regression Results
+
+With the `stargazer` package, it is relatively easy to generate regression tables. There are a lot of options you can use to customize the tables generated by `stargazer`. A useful starting point to learn how to use this package is [this cheatsheet](https://www.jakeruss.com/cheatsheets/stargazer/). Also, I've added some `html` code (starting with `<span>&#42`) below, since the *stars* were not displayed correctly due to a bug. You can ignore that part of the code, since the package should work properly when printing out `LaTeX` code.
+
+```{r results="asis"}
+stargazer(m0, m1, m2, type = "html",
+          digits = 3, 
+          column.labels = c("Model 0","Model 1", "Model 2"),
+          dep.var.labels.include = F,
+          model.numbers = F,
+          model.names = F,
+          title = "OLS Regression Results",
+          dep.var.caption  = "Abortion Attitudes (Rossi Scale)",
+          column.sep.width = "12pt", 
+          notes = "<span>&#42;&#42;&#42;</span>: p<0.01; <span>&#42;&#42;</span>: p<0.05; <span>&#42;</span>: p<0.1",
+          notes.append=F)
+```
+
+# Plotting Regression Results 
+
+Let us get back to plotting regression results. We first consider how our predictions of $\text{Model 1}$ (which does not contain any interactions) look like when we vary the values of both `female` and `pid`, while holding other variables fixed. 
+
+Recall that the estimates of $\text{Model 1}$ are stored in the object `m1`. To obtain predictions from the models, we have to create a new dataset that contains the values of the predictors for which the predictions should be made. Thereafter, we use the `predict` function to obtain the predicted values. 
+
+A simple example of such a dataset is the following:
+```{r}
+# create dataset of predictors for which predictions should be made
+pred_dat = data.table(
+    female = 1,
+    pid = 3,
+    college = 1,
+    linc = 10)
+```
+Feeding this dataset into the `predict` function using the option `newdata = pred_dat` will make model-based predictions for female respondents (`female == 1`), who are independents (`pid == 3`) with at least a college degree (`college == 1`), a family income of approximately `$22,000` (`linc == 10`): 
+```{r}
+# generate predicted value and 95% CI based on tmpdf
+predict(m1, newdata = pred_dat, interval = "confidence")
+```
+Notice that the `fit` column of this one-row dataset is nothing but the value of the $\hat y_i$, when we plug-in the specified values in the places of the corresponding predictors.
+```{r}
+# get coefficients
+coefs = coef(m1)
+
+# generate predicted value
+coefs[1] + coefs[2] + coefs[3] *3 + coefs[4] + coefs[5] * 10
+```
+The calculation of the confidence intervals is a little bit more complicated (and not required for this course) but was discussed in [the appendix of Lab 4](https://htmlpreview.github.io/?https://github.com/baruuum/intro_to_stats_2019/blob/master/Lab4/Lab4.html#appendix-response-to-joshs-question-shape-of-confidence-intervals-of-regression-lines).
+
+To see how our predictions vary with the variables `female` and `pid`, we generate a new dataset that contains all possible combinations of the values that these variables might take on. This might be done with the `expand.grid` function:
+
+```{r}
+# create all possible combinations between values of female and pid
+dat[
+    !is.na(pid) & !is.na(female), 
+    expand.grid(unique(female), unique(pid))
+]
+```
+There are two things to notice here. First, we subset the data to those values for which `pid` and `female` are not missing; otherwise the `expand.grid` function will treat `NA`s as one of the unique values that these variables take on:
+```{r}
+# results when missing values are not excluded first
+dat[
+    , expand.grid(unique(female), unique(pid))
+]
+```
+
+Second, this way of proceeding has some dangers. Namely, there might be combinations of `female` and `pid` for which we have no data at all! If we were to calculate predictions for these values, we would be **extrapolating outside of our data**. Sometimes the research question requires us to extrapolate (predicting future values in time-series analysis, for example); most often, however, this is something we want to avoid. 
+
+A better way is to use the `by` option with two variables, which enter as a list:
+```{r}
+# create possible combinations of female and pid for which we have actual data
+dat[, .N, by = list(female, pid)]
+```
+The as `.N` is a function that tells us the number of rows of a `data.table` object, the created `N` column will tell us exactly how many observations we have in our dataset for each combination of `female` and `pid`. So, if we would select only the first two columns of this dataset, we will have all the combinations for which we have also some observations.
+
+## Introducing the Pipe Operator `%>%`
+
+Before proceeding let me introduce the **pipe** operator (`%>%`) from the `magrittr` package (this package was loaded when we loaded the `dplyr` package). The pipe operator is a very simple but useful operator. The basic syntax looks like the following
+```r
+result = function1(some_object) %>% function2(optional_arguments)
+```
+After applying `function` to `some_object`, the resulting object is passed by the `%>%` operator to `function2`. The important point to remember is that the object that is passed will be always regarded as the **first argument** of `function2`. The end result of this two-step process is then stored into `result`. 
+
+So, the code from above is the same as doing something like:
+```r
+tmp_object1 = function1(some_object)
+result = function2(tmp_object1, optional_arguments)
+```
+By using the pipe, however, we can avoid creating many temporary objects and this will make our code cleaner (notice also that piping is very similar to chaining of data.table expressions).
+
+Using the pipe operator, we might create our new dataset for the predictions by the following code:
+```{r}
+# create combinations of female and pid for which obs. are available
+pred_dat = dat[
+  !is.na(pid), .N, by = list(female, pid)
+][ 
+  # reorder rows via chaining
+  order(female, pid)
+] %>%                                             # <- notice pipe here
+  # drop all other columns except female and pid 
+  select(female, pid) %>%                         # <- notice pipe here
+  # create two new columns named linc and college, 
+  # where the former is equal to the median log-income 
+  # and the latter equal to 1 for all rows
+  mutate(
+      linc = dat[, median(linc, na.rm = T)],
+      college = 1
+  ) 
+```
+Here the `select` and the `mutate` functions come from the `dplyr` package, where the first is used to select columns of a dataset (dropping the unselected ones) and the second to add new variables to a dataset.
+
+We might have a look into the resulting object:
+```{r}
+pred_dat
+```
+In fact, using the pipe here is unnecessary, as the resulting objects of all steps are `data.table`s. So, if you prefer chaining over piping you could simply do the following:
+```{r}
+pred_dat2 = pred_dat = dat[
+    !is.na(pid), .N, by = list(female, pid)
+][ 
+  # reorder rows via chaining
+  order(female, pid)
+][ 
+  # keep the variables female and pid
+    , c("female", "pid")
+][ 
+  # create the two new columns
+    , `:=`(
+        linc = dat[, median(linc, na.rm = T)],
+        college = 1
+    )
+]
+
+# check that two objects are the same
+identical(pred_dat, pred_dat2)
+```
+Having generated the dataset that contains the values for which we want to make the predictions, we can use the `predict` function to create point predictions as well as the 95% CIs. Simply running the `predict` function will return a `data.frame` object that looks like the following:
+```{r}
+predict(m1, newdata = pred_dat,
+        interval = "confidence",
+        level = 0.95,
+        type = "response")
+```
+Each row of this dataset contains the predicted value (`fit`) as well as the 95% CI (`lwr`, `upr`) for the prediction made using the the corresponding row in the dataset that was fed to `newdata`. In our case, this is the `pred_dat` object. 
+
+For example, looking at the fourth row of `pred_dat` we find:
+```{r}
+pred_dat[4, ]
+```
+So, we can see that the predicted value for a male respondent (`female == 0`), who is independent (`pid == 3`), has a logged income of 10.915 (`linc == 10.915`), and has at least a bachelor's degree (`college == 1`) is predicted to have a score of `4.0467` on the abortion scale (look at the fourth row of the `predict` output), and that the corresponding 95% CI is `(4.148 4.598)`.
+
+To plot our predictions we have just made, we need to create a new dataset containing the information of our predictors as well as the predictions. As the rows of the object returned by using the `predict` function exactly correspond to the rows of the `pred_dat` object, we can simply `cbind` these two datasets into one:
+```{r, fig.width = 5}
+# create predictions and merge to pred_dat 
+pred_m1 = cbind(
+  pred_dat, 
+  predict(m1, newdata = pred_dat,
+        interval = "confidence",
+        level = 0.95,
+        type = "response")
+)
+```
+
+To reiterate, we use `cbind` here because we are 100% sure that each row of the dataset returned from the `predict` function corresponds to the information of the same row in the `pred_dat` dataset. **If you are not 100% sure, you should never use the `cbind` function to combine datasets.** A lot can go wrong here. How to combine datasets where you don't have this correspondence structure between the rows will be dealt with in a separate lab.
+
+Having created predictions, we can plot the results. First we recode the `female` variable as a `factor` so that R knows it is a categorical variable:
+```{r}
+# recode female as a factor so it will be treated as categorical
+pred_m1[
+    , female := factor(female,
+                       levels = 0:1,
+                       labels = c("male", "female")
+                )
+]
+```
+and then we plot the predictions, together with the 95% CIs:
+```{r, fig.width = 5}
+# plot results
+ggplot(
+    pred_m1,
+    aes(x = pid, y = fit, col = female, group = female)
+) +
+  geom_line() + # add line
+  geom_ribbon(  # add 95% CI
+      aes(ymin = lwr, ymax = upr, fill = female),
+          alpha = .3, col = NA
+  ) +
+  theme_classic() +
+  labs(x = "Party Identification",
+       y = "Predicted Response") +
+  ggtitle("Abortion Attitudes by Gender and Party ID",
+          subtitle = "No Interaction Between Gender and Partisanship")
+```
+
+>**EXERCISE** 
+> 
+> 1. Why are the lines parallel to each other? How is this related to the assumptions we have made regarding our model?
+> 2. Given that one line represents our predictions for female respondents and the other for male respondents, what would be the substantive interpretations of these parallel lines?
+
+
+## Plotting Interactions
+
+Now, in $\text{Model 2}$ we had an interaction between partisanship and gender included. So, here we are assuming that the gender-difference on the abortion scale will differ according to partisanship. To obtain the predicted values from $\text{Model 2}$ we might follow the same steps as above. The only thing that changes is that we'll use `m2` instead of `m1` in the `predict` function:
+
+```{r, fig.width = 5}
+# create predictions and merge to pred_dat 
+pred_m2 = cbind(
+    pred_dat, 
+    predict(m2, newdata = pred_dat, # notice we are using m2 here!
+          interval = "confidence",
+          level = 0.95,
+          type = "response")
+)[ 
+    # recode female as a factor variable (chaining expressions)
+    , female := factor(female,
+                       levels = 0:1,
+                       labels = c("male", "female")
+                )
+] 
+
+# plot results
+ggplot(
+    pred_m2, 
+    aes(x = pid, y = fit, col = female, group = female)
+) +
+    geom_line() + # add line
+    geom_ribbon(  # add 95% CI
+        aes(ymin = lwr, ymax = upr, fill = female),
+        alpha = .3, # transparency
+        col = NA    # color for border (no color)
+    ) +
+    scale_color_manual( 
+        name = "Gender", # new title for legend (color)
+        labels = c("Male", "Female"), # new labels
+        values = c("darkmagenta", "darkcyan") # new colors
+    ) + 
+    scale_fill_manual( # the same for filling colors
+        name = "Gender",  # otherwise ggplot creates two legends
+        labels = c("Male", "Female"), # (try it out!)
+        values = c("darkmagenta", "darkcyan") 
+    ) + 
+    theme_classic() +
+    labs(
+        x = "Party Identification",
+        y = "Predicted Response"
+    ) +
+    ggtitle(
+        "Abortion Attitudes by Gender and Party ID",
+        subtitle = "Interaction Between Gender and Partisanship"
+    )
+```
+
+>**EXERCISE** 
+>
+> 1. Interpret the plot. What is the plot telling you?
+> 2. How does the interpretation differ from the last plot we made (which was based on a model without interactions)?
+
+# Diagnostics
+
+Before concluding the analysis, we might ask ourselves whether the regression assumptions are satisfied. There are assumptions that cannot be tested or empirically examined: most notably the assumption that the predictors are exogenous. But we might check other assumptions.
+
+A quick way to look into model diagnostics is to simply apply the `plot` function to the model object:
+```{r, fig.width = 6, fig.height = 6}
+# set graphical parameters
+par(mfrow = c(2,2)) # plot 2 X 2 matrix, by row
+
+# plot diagnostics plots
+plot(m2, pch = 19, col = scales::alpha("grey", .8), cex = .5)
+```
+These plots are only suggestive and not hard evidence of model misspecification. But they give us some clue about what's going on.
+
+- The first plot on the upper-left corner shows the fitted values $\hat y_i$ on the x-axis and the residuals $\hat e_i$ on the y-axis. The red line shows a LOWESS line, which can be roughly understood as the local y-average computed along the x-axis. Here you want to look into whether the red line shows any non-linearities or unusual patterns. If the model were well-specified, we would see a horizontal line at $y = 0$. 
+    To illustrate how this plot would look like if we had omitted a squared term in a quadratic regression model, we might run a simple simulation:
+    ```{r}
+    # observations and predictor
+    n = 1000; x = runif(n, -3, 3)
+    
+    # true DGP is quadratic in x (i.e., it has a x^2 term)
+    y = 2 + .5 * x - .25 * x^2 + rnorm(n, 0, 1)
+    # but we fit a linear model!
+    fit = lm(y ~ x)
+    
+    # fitted/predicted values and residuals
+    yhat = predict(fit); e = resid(fit)
+    
+    # plot fitted vs. residual plot
+    plot(yhat, e, pch = 19, col = scales::alpha("grey", .8),
+         ylab = "Residuals", xlab = "Fitted values", cex = 0.5)
+    lines(lowess(x = yhat, y = e), col = "red")
+    ```
+    So, the so-called fitted versus residual plot can us help to see whether our model is (badly) misspecified. Of course, even if we have the wrong model, the fitted versus residual plot might look perfectly find: the plot is just "helps" us to find some problems in the model; it is not a definite test.
+    What do you think about the plot we have for the GSS data?
+
+- In the upper-right corner shows a Q-Q plot, where the quantiles of the standardized residual distribution is plotted against the theoretical quantiles of a Normal distribution. If the within-sample distribution of the residuals were close to a Normal distribution, the points should align along the dashed diagonal line. Here, this is obviously not the case; so, we might be a little bit suspicious about the Normality assumption we make about the error term. 
+    To show how that plot should look in the case the residuals are Normally distributed, we can simulate some data again:
+    ```{r}
+    z = rnorm(n)
+    qqnorm(z, pch = 19, col = scales::alpha("grey", .8))
+    abline(a = 0, b = 1, lty = 2)
+    ```
+
+>**EXERCISE** Our Q-Q plot shows some signs of non-Normality of the error term of our regression model. If the assumption of Normally distributed errors is violated, how would this affect our interpretation of the regression results?
+    
+- In the lower-left corner, the square-root of the absolute value of standardized residuals, $\sqrt{|\tilde e_i|}$, are plotted against the fitted values, $\hat y_i$. The standardized residuals are simply the residuals rescaled to have a sample standard deviation of one (the already have a mean of zero, can you explain why?)---i.e., $\tilde e_i = \hat e_i / \text{SD}({\hat e})$, where $\text{SD}({\hat e}) = \sqrt{n^{-1}\sum_{i=1}^n \hat{e}_i^2}$. If the assumption of homoskedasticity holds, the variance of the error term should be equal regardless of the values of the predictors. So, when we plot the residuals against the fitted values (which are linear combinations of the predictors), we should expect that the mean residual at each level of the fitted values should be approximately equal. In the lower-left plot, this seems not to be the case: rather the mean residuals seem to be lower for low and high values of the fitted values. 
+    We can simulate, again, a scenario in which the residuals are homoskedastic. In fact, we have done it most of the time when we were simulating regression models. Even in the last simulation to generate fitted vs residual plots, we have assumed homoskedastic errors! So, let us use the data again to look at how the lower-left plot "should" look like:
+    ```{r}
+    # recall that the true DGP was quadratic in x
+    fit2 = lm(y ~ x + I(x^2))
+    # get predicted values and residuals
+    yhat2 = predict(fit2); e2 = resid(fit2)
+    # calculate square-root of absolute standardized residuals
+    sqrt_e = sqrt(abs(scale(e2, center = T, scale = T)))
+    # generate plot
+    plot(yhat2, sqrt_e, col = scales::alpha("grey", .9), 
+         pch = 18, cex = .5)
+    lines(lowess(x = yhat2, y = sqrt_e), col = "red")
+    ```
+    We see that it's approximately flat. Thus, the lower-left plot raises some concerns about heteroskedasticity.
+    
+>**EXERCISE** If the assumption of homoskedastic errors is violated, how would this affect our interpretation of the regression results?
+    
+- Lastly, the lower-right plot is a little bit more difficult to explain and needs more technical elaboration. The *leverage* of an observation measures how "unusual" the predictor values (not the outcome!) are compared to the rest of the data points. Formally, the leverage of observation $i$ is defined as the $i$th diagonal of the *hat matrix* $\bf H = X(X'X)^{-1}X'$, where $\bf X$ is the matrix $n \times k$ matrix of predictors and where the first column is full of $1$s. You don't have to understand the math behind this, but we might explore how this measure called leverage behaves via simulation. The code might be as well somewhat confusing (sorry!). The main goal is to create a plot where observations with higher leverage have darker colors to see how the leverage changes with the predictor values.
+    ```{r, fig.width = 4.5, fig.height = 4.5}
+    # generate two correlated predictors and an intercept term
+    X = cbind(
+      1, MASS::mvrnorm(500, c(0, 0), matrix(c(1, .6, .6, 1), ncol = 2))
+    )
+    # get diagonals of hat matrix
+    h_ii = diag(X %*% solve(t(X) %*% X) %*% t(X))
+    
+    # generate 500 magma colors
+    vcol = viridis::magma(
+      500, begin = 0, end = .8, direction = - 1, alpha = .8
+    )
+    
+    # plot the two predictors, obs with higher leverage colored darker
+    plot(X[, 2], X[, 3], col = vcol[rank(h_ii)], pch = 19,
+         xlab = "x1", ylab = "x2", cex = .75)
+    ```
+    So we see that high-leverage observations are somewhat "unusual" in their values of $x_1$ and $x_2$, where by unusual we mean that they are relatively far away from the center of the data cloud (with respect to the predictors). As you've learned by now, these unusual cases will heavily influence the regression plane (think about the one-dimensional case, where a observation with a high-$x$ value has an unusually high or low $y$ value.) Thus, when the residuals are very large, in magnitude, for observations that have high leverage-values, we might suspect that our regression plane is unduly influenced by this observation. In the lower-right plot, this seems not to be the case.
+    
+These diagnostics plots are just the starting point in examine whether our regression model fits the data well. In particular, notice that all of these plots try to find some "global" problems of the model, while there might be specific problems with each of the (partial) relationships between one predictor and our outcome. To look into the these problems, the Frish-Waugh Theorem comes in handy. As we've examined how to use that theorem for regression diagnostics in the [fifth lecture](http://htmlpreview.github.io/?https://github.com/baruuum/intro_to_stats_2019/blob/master/Lab5/Lab5.html), I'll not repeat it here.
+
+# Calculating Heteroskedasticity-robust Standard Errors in R
+
+As we've seen above, there are reasons to suspect that the equal variance assumption is violated. In these cases, you can use an alternative estimator for the standard errors, which is called the *Huber-White* estimator or the *sandwich* estimator. This estimator for the standard errors will give us valid statistical results (in the sense that a t-value would be greater than the critical value with probability $\alpha$ if the null hypothesis is true) even in the presence of heteroskedastic errors, given that our sample size is sufficiently large.
+
+Understanding how these robust standard errors work requires statistical knowledge that is beyond of this course. But, as we don't want to run statistical tests with the wrong standard errors, we still have to cover how to calculate these estimates in R. 
+
+We'll need two more packages to be installed, `lmtest` and `sandwich`.
+
+```{r, eval = F}
+# install new set of packages
+install.packages(c("lmtest", "sandwich"))
+```
+Thereafter, we take the object that contains our linear regression fit, and calculate a new set of standard errors for the coefficients:
+```{r}
+# loading packages to calculate robust standard errors
+library("lmtest")
+library("sandwich")
+
+# replace standard errors
+m2_robust = coeftest(m2, vcov. = vcovHC(m2, type = "HC1"))
+print(m2_robust)
+```
+To compare the results with our previous one, we might rely again on the `stargazer` package, which is already loaded:
+```{r}
+stargazer(m2, m2_robust, type = "text",
+          digits = 3,
+          title = "OLS Regression Results",
+          dep.var.caption  = "Abortion Attitudes (Rossi Scale)",
+          column.labels = c("OLS","OLS (Robust SE)"),
+          dep.var.labels.include = F,
+          model.numbers = F,
+          model.names = F,
+          notes.append=F)
+```
+We see that the estimated regression coefficients are the same across the models (of course! We've only re-calculated the standard errors) and only the standard errors are different. Notice as well that the standard errors are not necessarily larger when we use the sandwich estimator. Lastly, in this example, the usage of heteroskedasticity robust standard errors did not change any of the significance tests.
+
+In general, the standard errors based on the sandwich estimator will converge to the "true" standard errors as the sample size grows to infinity, regardless of whether the homoskedasticity assumption is true or not. Therefore, some (very knowledgeable) statisticians/econometricians have recommend to use robust standard errors as the default option in regression analysis, given that your sample size is large. Following this advice seems to be a sensible choice.

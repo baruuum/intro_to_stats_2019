@@ -1,0 +1,530 @@
+---
+title: "Lab5 - Multiple Regression II"
+author: "Barum Park"
+date: "10/18/2019"
+output: 
+    html_document:
+        keep_md: false
+        matjax: default
+        theme: yeti
+        highlight: textmate
+        toc: true
+---
+
+<style type="text/css">
+
+body{ 
+
+    font-size: 16px;
+    line-height: 1.7em;
+
+}
+
+blockquote {
+    padding: 10px 20px;
+    margin: 0 0 20px;
+    font-size: 16px;
+    border: solid 1px;
+}
+
+h1 { font-size: 32px; }
+
+h2 { font-size: 24px; }
+
+h3 { font-size: 20px; }
+
+.nobullet li {
+  list-style-type: none;
+}
+
+</style>
+
+<br>
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, 
+                      cache = FALSE,
+                      fig.align = "center",
+                      fig.width = 4,
+                      fig.height = 3.5,
+                      letina = TRUE)
+```
+
+Today, let us focus a little bit more on coding and concrete steps of a data analysis. We will try to answer a simple question with the 2018 GSS dataset, namely how do individuals of different gender differ in their views on abortion.
+
+As you had both a quiz and an assignment this week, we'll not be able to do much today. So, we'll focus on *preparing* a raw dataset for modeling. This, I believe, is **most important step** in any data analysis. As you gain more experience with quantitative data analysis, you will find that most complicated models often (but not always) lead to quite similar substantive conclusions as more simple models. In other words, the improvement due to modeling is often at the margins. 
+
+On the other hand, if your data has some flaws or **if you make mistakes in handling your data**, such as recoding variables in the wrong way or accidentialy dropping important observations, this often leads to quite large differences in the results. So, you should take special care at the data preparation step and **build multiple checks into your code** to make sure that your code has indeed the intented effects. I will reiterate this point over and over again during the course of this class. Also, you'll encounter an example of how a simple (unintended) mistake can drastically change your conclusion regarding whether the U.S. public is politically polarized over the issue of abortion.
+
+<br>
+
+# Some Background on the Abortion Issue
+
+To give you a little bit of background, whether women should have the legal right to have an abortion is one of the long-standing debates in U.S. politics. Among "cultural issues," abortion is, without a doubt, the most divisive one. Every election season, candidates are asked about their stance on the issue, which has become to serve as a "litmus test" to check how culturally conservative they are. This might surprise some of you, since debates on abortion make it rarely into the political discourse in other countries, and if it does remains at the periphery.
+
+In the pre-1970 period, most U.S. citizens were against abortion rights. This slowly changed over the next decade and aggregate opinion on the abortion issue liberalized consistently. The liberal trend stalled, however, in the late 70s to the early 80s. From there on, Republicans became more conservative over time, while Democrats kept becoming more liberal. Today, abortion is believed by many to be "the" polarizing issue. Furthermore, the recent changes in the Supreme Court, and conservatives' efforts to overturn *Roe v. Wade*, is increasing the salience of the abortion debate.
+
+<br>
+
+# Data Preparation
+
+In today's lab we'll split our R code into two parts. One for the preparation of the data and the other for the analysis of the data.
+
+So, let us start by opening a new R script that we save in the directory `working_directory/Lab6/Lab6_data_preparation.R`.
+
+Before going into the analysis, let us install two new packages that we'll use today:
+
+```{r, eval = F}
+# install new packages
+install.packages(c("dplyr", "dtplyr"))
+```
+
+The `dplyr` package is a widely used package for data manipulations, while the `dtplyr` package is used so that `dplyr` functions "play nicely" with `data.table` objects.
+
+We first attache the packages we are going to use:
+
+```{r, message = F}
+# load packages to use
+library("here")
+library("purrr")
+library("dplyr")
+library("data.table")
+library("dtplyr")
+library("ggplot2")
+```
+
+Next, let us load the GSS dataset, which should be in your `working_directory/raw_data` directory (if not, I hope you'll be able by now to identify the path to the directory in which you have stored the file.)
+
+```{r}
+# load gss 2018 data
+gss_full = readstata13::read.dta13(
+    here("raw_data", "GSS2018.dta"),
+    convert.factors = FALSE
+)
+```
+As before, the class of the `gss_full` object will be a `data.frame`. We use the `setDT` function of the `data.table` package to transform it into a `data.table` object:
+```{r}
+# check class of gss_full
+class(gss_full)
+
+# convert to data.table and check class again
+setDT(gss_full)
+class(gss_full)
+```
+
+<br>
+
+# Constructing the Outcome Variable
+
+Since we are interested in the respondents' attitudes on abortion, we need to figure out which items about abortion were asked in the 2018 GSS. In the year 2018, there were *two* batteries of questions on this topic. How I know this? Because I've looked into the **codebook** of the GSS. To spare you the time, open the codebook you've downloaded last time and go on to **page 473**.
+
+You'll find a series of questions that start with the statement:
+
+"Please tell me whether or not you think it should be possible for a pregnant woman to obtain a legal abortion if ... "
+
+and the concrete questions following this are
+
+1. If there is a strong chance of serious defect in the baby?
+2. If she is married and does not want any more children?
+3. If the woman's own health is seriously endangered by the pregnancy?
+4. If the family has a very low income and cannot afford any more children?
+5. If she became pregnant as a result of rape?
+6. If she is not married and does not want to marry the man?
+
+The variable names for these questions are, in order, `abdefect, abnomore, abhlth, abpoor, abrape`, and `absingle`.
+
+We also see that all the questions had 5 possible response categories:
+
+- 1: yes
+- 2: no
+- 8: don't know
+- 9: no answer
+- 0: not applicable
+
+(There is another question, which asks whether abortion should be legal if "the woman wants it for any reason". This item was later added to the six we considered so far. We will not analyze this question here.)
+
+What would we do with these variables? We might look into the response distribution of each variable, one at a time. This is indeed something that you should do when you do a real analysis. Here, due to time constraints, let us simply count the numbers of question to which each respondent has given a `yes` response.
+
+>**EXERCISE** Say we count the number of `yes` responses to the series of questions. What would the resulting variable measure? Would this be a good measure? What would this variable fail to capture?
+
+
+## Creating a New Variable Equal to the Sum of `yes` Responses
+
+Let us first create a `character` vector of the abortion items:
+```{r}
+# save abortion items
+ab_names = c("abdefect", "abnomore", "abhlth",
+             "abpoor", "abrape", "absingle")
+```
+Next, we have a deeper look into `absingle`:
+```{r}
+# check response categories for abany
+table(gss_full$absingle, useNA = "ifany")
+```
+
+We see that the response categories `don't know`, `no answer`, and `not applicable` are already coded as missing values. We can quickly check whether this is also the case for the other items:
+
+```{r}
+# check response categories of all abortion items
+gss_full[
+  , map_int(.SD, function(w) {
+            sum(
+                !(unique(w) %in% c(1:2, NA))
+            )
+        }
+    ),
+  .SDcols = ab_names
+]
+```
+
+Okay. This expression needs some explanations.
+
+1. We take the `gss_full` object, which is a `data.table` object.
+2. Opening the square brackets means that we want to do something with it!
+3. The first thing that you see is a comma (`,`). Recall that expressions that come *before* the comma deal with the *rows* of the `data.table` object. So here we leave the rows as they are.
+4. `.SD` is a special function that is used with `data.table` objects. It stands for **S**ubset of **D**ata table. Namely, whenever you subset a `data.table`, the `.SD` object will stand for the sub-`data.table` that is created by the subsetting operation.
+5. Using the `map_int` function from the `purrr` package, we apply a function to the *columns* of the subsetted `data.table`, i.e., `.SD`. That we use the `map_int` function means that we expect an `integer` value as the result of applying the function. The reason why it is the *columns* (not the rows) to which the function is applied is because a `data.table` is just a `list` object, where each element of the list is a column in the data.table. So, applying a function to each element of a `data.table` means applying it to the columns.
+6. As each element to which we `map_int` the function (to be defined next) is a column of the data.table object, the argument `w` of the function will stand for these columns.
+7. The `%in%` function is another special function (although not unique for `data.table` objects). `x %in% y` checks whether the elements in `x` can be found in the object `y`. For each element in `x`, it will return a `TRUE` if it can be found and a `FALSE` otherwise.
+8. So in the function we apply,
+    1. we check whether the `unique()` values of `w` are either `1`, `2`, or `NA`.
+    2. But as `unique(w) %in% c(1, 2, NA)` is enclosed in parentheses with a negation sign (`!`) in front of it, it will return a `TRUE` when a unique element of `w` contains  *something else* then `c(1, 2, NA)`.
+    3. Lastly, we `sum` the result: for each unique element in `w` that is anything else then `c(1, 2, NA)` the sum will increase by one (as each `TRUE` will be converted to a `1`). Hence, a zero will indicate that all unique elements in `w` are either `1`, `2`, or `NA`.
+9. The `map_int` function is followed by a comma (`,`). So, the last part of our expression will specify the options. Here, `.SDcols = ab_names` specifies that we want to apply `map_int` only to the columns that have names which are included in our character vector `ab_names`.
+
+So, that the resulting vector is a vector full of zeros means that `1`, `2`, or `NA` are the *only values that all of the columns in the `ab_names` vector take on*. So we can rest assured that the values in the codebook---`8` (don't know), `9` (no answer), `0` (not applicable)---were correctly coded as missing values.
+
+Whenever you analyze data, **it is necessary that you follow these steps, and check whether the data look indeed as you expect them to look**.
+
+Next, for each respondent, we count the number of `yes` responses to the abortion questions and store the result into a new column named `ab_count`.
+
+```{r}
+# create count of `yes` responses on abortion items
+gss_full[
+    , ab_count := rowSums(.SD == 1, na.rm = T),
+    .SDcols = ab_names
+]
+```
+
+Here, again, we have encountered a function, namely `rowSums`. This function will take a rectangular object (either a `matrix` or a `data.frame`/`data.table`) and sum its elements along the rows (to sum along the columns, you can use the `colSums` function). The option `na.rm = TRUE` says that `NA` values should be ignored. If this option is set to `FALSE`, then all rows that contain at least one `NA` will have a sum equal to `NA` as well.
+
+As we have created a new variable, we need to check whether the variable indeed looks as we expect! We can check this with the following code:
+
+```{r}
+# check created variable
+gss_full[, tail(.SD), .SDcols = c("ab_count", ab_names)]
+```
+
+So, the variable indeed contains the information it should contain. Notice that all `NA` values are ignored in counting the number of `1`s in each row.
+
+The first thing we want to do with our new variable is to check its distribution. We can create a table
+```{r}
+# frequency table of count variable
+table(gss_full$ab_count)
+```
+as well as look at a bar plot
+```{r}
+# plot distribution
+ggplot(gss_full, aes(x = ab_count)) +
+  geom_bar(col = "white", fill = "black", alpha = .8) +
+  theme_classic() +
+  labs(x = "Number of 'yes' Responses",
+       y = "Frequency") +
+  ggtitle("Abortion Attitudes",
+          subtitle = "Rossi Scale")
+```
+Wow. This looks indeed heavily polarized, with most of the respondents either agreeing with *all* of the questions or not agreeing with *any* of them! But, let us not reach our conclusions too fast. Before reading on, think about what could have gone wrong so far.
+
+>**EXERCISE** What is wrong with the conclusion that we have just reached?
+
+If you had a strong prior belief that the public is heavily polarized on the issue of abortion, you might have taken the results as granted and moved on. This is a real danger in any data analysis; and it is important to be suspicious of every result.
+
+What went wrong in what we've done so far is that we have counted all the respondents who refused to answer the question or where not asked these questions at all as pro-choice extremists! That is, all respondents whose answers to the battery of question was filled with seven `NA`s treated as if they had said `no` to all of them!
+
+```{r}
+# create a new variable which is equal to ab_count
+gss_full[, ab_count_new := ab_count]
+
+# create a vector that is TRUE for respondents who had
+# only NAs on the abortion questions
+allNA = gss_full[
+  , rowSums(is.na(.SD)) == length(ab_names),
+  .SDcols = ab_names
+]
+
+# replace values on ab_count_new to NA for these respondents
+gss_full[allNA, ab_count_new := NA]
+```
+
+Now that we have, again, created a new variable, we have to check:
+```{r}
+# check new variable
+gss_full[, table(ab_count, ab_count_new, useNA = "ifany")]
+```
+We see that only respondents who had a `0` on the `ab_count` variable are assigned to a `NA` on the `ab_count_new` variable. This is the results we should expect! So, we move on to plot the distribution of the `ab_count_new` variable:
+```{r}
+# plot the results again
+ggplot(gss_full[!is.na(ab_count_new)], aes(x = ab_count_new)) +
+  geom_bar(col = "white", fill = "black", alpha = .8) +
+  theme_classic() +
+  labs(x = "Number of 'yes' Responses",
+       y = "Frequency") +
+  ggtitle("Abortion Attitudes",
+          subtitle = "Rossi Scale, Corrected Results")
+```
+
+Notice how a single coding error can lead to very different conclusion! Maybe the plot will be easier to interpret if we plot the percentages instead of the frequencies. In `ggplot`, this takes a little bit more work:
+
+```{r}
+# plot percentages instead of frequencies
+ggplot(
+    gss_full[!is.na(ab_count_new)],
+    aes(x = ab_count_new)
+  ) +
+  geom_bar(
+    aes(y = (..count..) / sum(..count..)), # notice change here
+    col = "white", fill = "black", alpha = .8) +
+  theme_classic() +
+  labs(x = "Number of 'yes' Responses",
+       y = "%") +
+  geom_text( # adding labels as well!
+      aes(y = ((..count..)/sum(..count..)),
+          label = scales::percent((..count..)/sum(..count..))),
+          stat = "count",
+          nudge_y = .015,
+          size = 3
+  ) +
+  lims(y = c(0, .45)) + # increase limits to show labels correctly
+  ggtitle("Abortion Attitudes",
+          subtitle = "Rossi Scale, Corrected Results")
+```
+
+Now this looks more realistic! Would you still conclude that the public is polarized over the abortion issue?
+
+Lastly, here are two notes of caution:
+
+1. Notice that we have treated all "don't know" or "no answer" responses as zeros when summing up the "yes" responses. This will bias the distribution towards the conservative side. For example, if a respondent would have said yes to five items but did not respond to the sixth question, this would result in a score of 5, while s/he might have also answered the last question positively. In short, we sometimes under-count the positive responses but never over-count them, leading to a conservative bias---i.e., a bias towards low scores in the constructed scale.
+2. Second, **most survey data will not be simple random samples from the population**. Instead, they use complex sampling designs that *might* result in unequal probabilities of individuals to be selected into the sample. In addition, many individuals who are selected into the sample will simply refuse to respond to the survey, which might create biases in our estimates. The best that survey organizations can do is to provide **weights** that adjust for unequal inclusion probabilities and non-response patterns. So, all survey analyses should be weighted by the weight variables that are provided together with the dataset. The GSS has such weight variables as well; how to incorporate these weights will not be discussed in this course, however. For now, the important point is not to trust these results too much (although I believe that the weighted percentages will be quite similar to the unweighted; but, who knows?)
+
+## Creating a Second Variable
+
+Next, look into **page 2778** of the codebook, where you'll a set of abortion attitude items that were newly fielded in 2018.
+
+We will focus on the following two questions
+
+- `abfelegl`: Leaving aside what you think of abortion for yourself, do you think a woman should continue to be able to have an abortion legally or not, or would you say it depends?
+
+- `abmelegl`: Leaving aside what you think of abortion for those close to you, do you think a woman should continue to be able to have an abortion legally or not or would you say it depends?
+
+The possible response categories, according to the codebook, for these questions are:
+
+- 1: should
+- 2: should not
+- 8: it depends
+- 9: don't know
+- 9: no answer
+- 0: not applicable
+
+Now, looking into the first question, we find something weired:
+
+```{r}
+# check frequencies
+table(gss_full$abfelegl, useNA = "ifany")
+```
+
+We have the response categories `1`, `2`, `3`, and `NA`, but there is no `3` in the codebook! Looking closer, we see that the frequency for `3` is exactly equal to the `it depends` category in the codebook. Also, the frequencies of all other categories match as well.
+
+We should check whether this is also true for the second question:
+
+```{r}
+# check frequencies
+table(gss_full$abmelegl, useNA = "ifany")
+```
+
+Hm...so it seems there was some error in processing the codebook, and the `it depends` category was in fact coded using the number `3`!
+
+Let us recode both of these variables into the following scheme: `-1 = should not`, `0 = it depends`, `1 = should`. As we have only two variables here, we can deal with each separately. But since this is a lab, I'll write a function for the recoding:
+
+```{r}
+# vector containing names of new abortion questions
+abnew_names = c("abfelegl", "abmelegl")
+
+# function to recode new abortion variables
+abnew_recode = function(w) {
+    ifelse(w == 1, 1,
+              ifelse(w == 2, -1,
+                     ifelse(w == 3, 0, NA)
+              )
+    )
+}
+
+# recode variables into new variables
+gss_full[, notyou_ab := abnew_recode(abfelegl)]
+gss_full[, notclose_ab := abnew_recode(abmelegl)]
+```
+
+>**EXERCISE** Check whether the recoding was successful
+
+Next, we might look into how these variables are related:
+
+```{r}
+# cross tabulate both items on the legality of abortion
+gss_full[, table(notyou_ab, notclose_ab)]
+```
+What's going on here? We have only zeros in our table!
+
+>**EXERCISE** Speculate about what might be going on here.
+
+The most common reason for such results are
+
+1. You coded something wrong
+2. The two questions were asked to different sets of respondents
+
+The second scenario is encountered, for example, when the survey used a **split-ballot** design in administrating these questions. That is, an approximate half of the respondents might have been given the "Leaving aside what you think of abortion for yourself" version of the question, while the other half was administrated to the "Leaving aside what you think of abortion for those close to you", and no respondent was asked both questions.
+
+For the new abortion items, this is, however, not the case. Reading through the question carfully and reflecting a little bit might give us a hunch: namely, one of the questions is asking the respondent not to "think of abortion for yourself," which would not make much sense for male respondents. So it might be the case that one version was administrated to male respondents and the other to female respondents. Let us check this possibility.
+
+On **page 203** of the codebook, you'll find that the variable `sex` has two values: 1 for Male and 2 for Female. Crosstabulating this variable with the two new abortion items gives the following results:
+
+```{r}
+# check cross-table of gender and new abortion item
+gss_full[, table(notyou_ab, sex)]
+gss_full[, table(notclose_ab, sex)]
+```
+
+So, it seems that our hunch was right (and I can assure you that it is indeed the way in which the questions were administrated). We will not use this variable in the analysis that follows. Instead, let us prepare some predictor variables for the analysis.
+
+# Recoding Predictors
+
+Let us focus on the following predictors: party identification, gender, education, and income.
+
+## Party Identification
+
+Search the codebook for the variable **partyid**. When we look into the table this variable, we see that the value `7`, which stands for "Other party, refused to say" is not coded as missing.
+```{r}
+# check frequency on partyid
+table(gss_full$partyid)
+```
+So, let us do this. We create a new variable named `pid` which is identical to the `partyid` variable, but where those respondents who answered `7` on the `partyid` variable will have a `NA` on the `pid` variable:
+
+```{r}
+# create an identical variable of partyid
+gss_full[, pid := partyid]
+# set those case for which partyid == 7 to NA
+gss_full[partyid == 7, pid := NA]
+# check results
+gss_full[, table(pid, partyid, useNA = "ifany")]
+```
+
+## Gender & Education
+
+>**EXERCISE**
+>
+>1. On **page 203** of the codebook, you'll find how the `sex` variable is coded. Recode this variable so that `0` stands for `Male` and `1` stands for `Female`. Name the recoded variable `female`. Check that your recoding was successful.
+>2. On **page 182** of the codebook, you'll find the description of a variable named `degree`. Use this variable to create a new variable, named `college`, which is `1` if the respondent has a bachelor's degree or higher and `0` otherwise.
+
+When you cross tabulate the newly recoded variable and the old variable, you should get the following results:
+
+```{r, echo = F}
+# gender
+gss_full[, female := ifelse(sex == 1, 0, 1)]
+# check
+gss_full[, table(sex, female, useNA = "ifany")]
+
+# education
+gss_full[!is.na(degree), college := ifelse(degree > 2, 1 ,0)]
+# check
+gss_full[, table(college, degree, useNA = "ifany")]
+```
+
+## Family Income
+
+Here it gets a little bit messy. Search the codebook for the variable **income16**. You'll see that it was measured using 27 categories and, hence, it is a discrete variable. To use it as a continuous variable, we assign the midpoint of each response category to a new variable named `fam_inc`, and use this as our income variable. Notice that there are two top-coded categories in this variable, "\$150,000 and over" and "\$170,000 or over". We assign the arbitrary values 160,000 and 200,000 respectively to them.
+
+```{r}
+# create family income variable
+gss_full[income16 == 1, fam_inc := 500]
+gss_full[income16 == 2, fam_inc := 1999.5]
+gss_full[income16 == 3, fam_inc := 3499.5]
+gss_full[income16 == 4, fam_inc := 4499.5]
+gss_full[income16 == 5, fam_inc := 5499.5]
+gss_full[income16 == 6, fam_inc := 6499.5]
+gss_full[income16 == 7, fam_inc := 7499.5]
+gss_full[income16 == 8, fam_inc := 8999.5]
+gss_full[income16 == 9, fam_inc := 11249.5]
+gss_full[income16 == 10, fam_inc := 13749.5]
+gss_full[income16 == 11, fam_inc := 16249.5]
+gss_full[income16 == 12, fam_inc := 18749.5]
+gss_full[income16 == 13, fam_inc := 21249.5]
+gss_full[income16 == 14, fam_inc := 23749.5]
+gss_full[income16 == 15, fam_inc := 27499.5]
+gss_full[income16 == 16, fam_inc := 32499.5]
+gss_full[income16 == 17, fam_inc := 37499.5]
+gss_full[income16 == 18, fam_inc := 44999.5]
+gss_full[income16 == 19, fam_inc := 54999.5]
+gss_full[income16 == 20, fam_inc := 67499.5]
+gss_full[income16 == 21, fam_inc := 82499.5]
+gss_full[income16 == 22, fam_inc := 99999.5]
+gss_full[income16 == 23, fam_inc := 119999.5]
+gss_full[income16 == 24, fam_inc := 139999.5]
+gss_full[income16 == 25, fam_inc := 160000]
+gss_full[income16 == 26, fam_inc := 200000]
+```
+This is not a very elegant method to recode variables, but it will do the job. Also, notice that for categories of `income16` for which we have not assigned any values in `fam_inc`, the `fam_inc` will be set to `NA`.
+
+To check whether the recoding was successful, you should check the table `gss_full[, table(income16, fam_inc)]`. I leave this for you to check. Here, let us just quickly check that we have not, accidentally, left any non-missing category of `income16` out in our recoding steps. We might check this by cross-tabulating the missing values for the `income16` variable with the missing values of the `fam_inc` variable. If we had left out some categories in our recoding scheme, there would be some rows in our data in which `income16` is *not* missing but `fam_inc` is missing.
+
+```{r}
+# check missing values for income16 and fam_inc
+gss_full[, table(is.na(income16), is.na(fam_inc))]
+```
+We see that if the one variable is missing, the other is missing as well; and if the one variable has a non-missing response, the other variable is non-missing as well.
+
+It is often convenient to deal with the logarithm of income rather than the raw-income. So, let us also create a log-family income variable:
+```{r}
+gss_full[, log_inc := log(fam_inc)]
+```
+
+With this the preparation of our variables is complete.
+
+>**EXERCISE** 
+>
+> 1. What other variables would be important in predicting abortion attitudes? 
+> 2. Let $Z$ be a variable that was not included in our model. If $Z$ is correlated with the outcome but not with the predictor variables in our model, how would omitting $Z$ influence our regression results?
+> 3. If $Z$ is correlated with any of the predictors but not with the outcome, how would omitting $Z$ influence our regression results?
+> 4. If $Z$ is correlated with both the outcome and `pid` (but not the other variables), how would omitting $Z$ influence our regression results?
+
+<br>
+
+# Saving the Recoded Dataset
+
+At this point, it is a good idea to save the dataset. As we have already a `working_directory/data` directory, let us save the data there.
+
+```{r}
+fwrite(gss_full, here("data", "Lab6dat.csv"))
+```
+
+Also, it is a good idea to leave some memos in your R script. For example, if your script started with
+
+``` r
+### title: Lab 6 - Analyzing Abortion Questions in the 2018 GSS
+### author: baruuum
+```
+
+you might want to add the following:
+
+``` r
+### title: Lab 6 - Analyzing Abortion Questions in the 2018 GSS
+### author: baruuum
+
+### Notes:
+### Running this script will create a dataset named Lab5dat.csv,
+### which contains recoded variables for
+### 1) the six abortion items (Rossi scale), party identifiation,
+###    gender, education, and family income
+### 2) data set contains the original 2018 GSS variables in 
+###    addition to the recoded variables
+```
+so that you will know immediately what you've done in this script when you come back after three month or so (probably next week).
+
+

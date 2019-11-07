@@ -17,9 +17,11 @@ If you find any errors or typos, or anything you want to add, please shoot me a 
 5. Multiple Linear Regression I: Interpretation of Regression Coefficients, the Frish-Waugh Theorem
 6. Multiple Linear Regression II: Data Preparation for a Concrete Data Analysis Example
 7. Multiple Linear Regression III: Fitting Multiple Regression Models to Data, Interaction Effects, Heteroskedasticity-robust Covariance Matrix Estimation.
+8. Binary Outcomes, Maximum Likelihood Estimation, Linear Probability Model, Logistic Regression
 
 # Assignments
 
 1. Basic mean and variance calculations, some combinatorics, 
 exercises in plotting via ggplot, a small simulation exercise
 2. Hypothesis testing, t- and chi-squared tests, statistical power, correlations and linear regression
+3. Assumptions of the Linear Regression Model, interactions, stripes in residuals-versus-fitted plots
