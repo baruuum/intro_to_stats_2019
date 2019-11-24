@@ -58,7 +58,13 @@
 
 # lab8
 !Lab8/
+!Lab8/Lab8.Rmd
 !Lab8/Lab8.html
+
+# lab9
+!Lab9/
+!Lab9/Lab9.Rmd
+!Lab9/Lab9.html
 
 # Data ----------------------------------------------
 

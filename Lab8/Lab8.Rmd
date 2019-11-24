@@ -1,0 +1,889 @@
+---
+title: "Lab8 - Logistic Regression"
+author: "Barum Park"
+date: "11/08/2019"
+output: 
+    html_document:
+        keep_md: false
+        matjax: default
+        theme: yeti
+        highlight: textmate
+        toc: true
+---
+
+<style type="text/css">
+
+body{ 
+
+    font-size: 16px;
+    line-height: 1.7em;
+
+}
+
+blockquote {
+    padding: 10px 20px;
+    margin: 0 0 20px;
+    font-size: 16px;
+    border: solid 1px;
+}
+
+h1 { font-size: 32px; }
+
+h2 { font-size: 24px; }
+
+h3 { font-size: 20px; }
+
+.nobullet li {
+  list-style-type: none;
+}
+
+</style>
+
+<br>
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, 
+                      cache = FALSE,
+                      fig.align = "center",
+                      fig.width = 4.5,
+                      fig.height = 4,
+                      letina = TRUE)
+```
+
+
+This week we will go into **Logistic Regression**. The logistic regression model is a subclass of models that are called **Generalized Linear Models (GLM)**. All regression models, where the distribution of the outcome is assumed to belong to the [exponential family of distributions](https://en.wikipedia.org/wiki/Exponential_family) (not to be confused with the exponential distribution) is a GLM. In fact, the linear regression model with the assumption that the error term is Normally distributed belongs to the family of GLMs as well.
+
+To understand how these models work, we will need to understand a new estimation technique, namely **Maximum Likelihood Estimation**. Unfortunately, we will not have the time nor the necessary background knowledge to go deep into Maximum Likelihood Estimation, but I'll provide you with some intuitions.
+
+<br>
+
+# Binary Outcomes and Maximum Likelihood Estimation
+
+When the outcome is binary, $Y_i \in \{0,1\}$, it is common to assume that it follows a Bernoulli distribution. As you might recall, a Bernoulli distribution has one parameter, which we might call $\pi$, that represents the probability of a "success." It is the convention to let $Y_i = 1$ be a success and $Y_i = 0$ be a fail; so, $\pi = \Pr[Y_i = 1]$. An example of the Bernoulli distribution that we have discussed repeatedly in the Math Refresher is the toss of a biased coin.
+
+## Recap of Hypothesis Testing
+
+Suppose now that we flip a biased coin $n = 10$ times, where the tosses are independent of each other and where we can assume that the parameter $\pi$ is the same for all tosses (as we are flipping the same coin). So, we will have ten outcomes $\{Y_1,..., Y_{10}\}$ that we observe in the experiment. Suppose we choose the statistic $\tilde Y = \sum_{i=1}^{10}Y_i$ to make inference about the parameter $\pi$. 
+
+If we follow the logic of hypothesis testing that was introduced so far, we would ask a question like following: 
+
+> Let us assume that $\pi = 0.5$ (the null hypothesis).  Before running the experiment, we want to make sure that the probability of falsely rejecting the null hypothesis is at most 5% (the $\alpha$ level). We also have an alternative hypothesis. Before running our experiment we ask the following question: what would be the distribution of the statistic $\tilde Y$ if $\pi = 0.5$ (the sampling distribution under the null hypothesis)? Given the sampling distribution under the null, our alternative hypothesis, and our $\alpha$-level, we ask further: how large a statistic, in magnitude, do we have to observe to reject the null hypothesis (the rejection region)? Finally we run our experiment: we flip the coin ten times to obtain the *observed* (or *realized*) value $\tilde y$. We look whether it falls into the rejection region and if it does, we reject the null hypothesis that $\pi = 0.5$; if not, we don't reject it.
+
+**A small note**: Notice that this approach to our experiment *always ends with a decision*. Also, recall that we never *accept* the null hypothesis. We reject it or we don't reject it. In fact, most of the time we know already that the null hypothesis is wrong! (think about it: what would be the probability that a real number is exactly equal to $\pi$?) What a non-significant result tells us is simply that we don't have enough data to reject it. 
+
+Let us consider a concrete example. Suppose we have set $\alpha = .05$. Under the null hypothesis of $\pi = 0.5$, the statistic $\tilde Y$ will have a Binomial distribution with parameters $n = 10$ and $\pi = 0.5$, i.e., $\tilde Y \sim \text{Binomial}(10, 0.5)$. The probability mass function of $\tilde Y$ is therefore
+$$\begin{aligned}
+p_{\pi}(\tilde y) &= \text{Pr}_\pi[\tilde Y = \tilde y] \\
+&= \binom{n}{\tilde y}\pi^{\tilde y}(1 - \pi)^{n - \tilde y} \\
+&=\binom{n}{\tilde y}(0.5)^{n}
+\end{aligned}$$
+where we have used the subscript $\pi$ to emphasize that this probability depends on the assumed value of $\pi$ (which is, in this case, $\pi = 0.5$). 
+
+Now, if our alternative hypothesis is $H_a: \pi > 0.5$, our rejection region would be $\{8,9,10\}$. This is because $\Pr[\tilde Y > 7] \approx 0.055$ and $\Pr[\tilde Y > 8] \approx 0.011$ as shown below:
+
+```{r}
+cbind(
+    y = 1:10, 
+    `Pr[Y_tilde > y]` = pbinom(q = 1:10,     # value to eval.
+                               size = 10,    # no. of trials
+                               prob = .5,    # success prob.
+                               lower.tail = FALSE # get 1 - Pr[Y <= y]
+                        )
+)
+```
+
+Hence, after running the experiment (flipping the coin 10 times) and observing the realized value of our test statistic---namely, $\tilde y$---we reject the null hypothesis only if $\tilde y \ge 8$.
+
+## The Logic of Maximum Likelihood Estimation
+
+Maximum Likelihood Estimation approaches the problem of finding statistical evidence regarding a parameter value in a slightly different fashion. The question goes like the following: 
+
+> Let us assume some distribution for the data. We run the experiment and obtain a *observed* dataset. Then we ask, under the assumption that our distribution (or the assumed DGP) is the true distribution from which the data come from, what is the most likely parameter value that has generated it?
+
+So, suppose we have *observed* $\tilde y = 8$. We assume that this statistic comes from a series of Bernoulli trials; so, the probability of observing this value is equal to
+$$\text{Pr}_\pi[\tilde Y = 8] = \binom{10}{8}\pi^{8}(1-\pi)^{2}.$$
+
+What remains unknown is the parameter $\pi$. In Maximum Likelihood Estimation, we search for a value of $\pi$ that is **most likely** to have given rise to the observed data. In other words, we try to find a value of $\pi$ that maximizes the probability in the equation above. Contrast this with the approach we have adopted so far, where we have **assumed** a particular value of $\pi$ to quantify how "unlikely" the observed statistic is to occur if that were indeed the true value.
+
+To find the value that maximizes the probability of the observed data, we treat the probability mass function of the data, $p_{\pi}(\tilde y)$,  as a function of the parameter $\pi$. The probability mass (or density) function, treated as a function of the parameter, is called the **likelihood function**. The value we are trying to find, $\hat\pi$, is therefore the value of $\pi$ that maximizes the likelihood. Hence the name Maximum Likelihood Estimation.
+
+To get a feeling of how the likelihood function looks like, we might plot a few feasible points of $\hat\pi$ and the corresponding values of the likelihood function:
+
+```{r}
+# create a set of candidate values for pi
+pi = seq(0, 1, .05) 
+
+# calculate the likelihood function
+lik = dbinom(x = 8,         # observed no. of success cases
+             size = 10,     # total trials
+             prob = pi, # success probabilies
+)
+
+# plot the likelhood function and the candidate values
+plot(pi, 
+     lik, 
+     xlab = expression(pi), 
+     ylab = "Likelihood",
+     pch  = 19)
+
+# add vertical lines
+for (i in seq_along(pi)) {
+  
+  segments(pi[i], 0, pi[i], lik[i])
+  
+}
+```
+
+Notice that this is **not** the probability distribution of $\pi$. It is the value of the probability mass function of $\tilde Y$, where we have fixed $\tilde Y$ at $8$ and have plugged in different values of $\pi$. The point at $\pi = 0.6$, for example, would be the probability that $\tilde Y$ is equal to $8$ when $\pi = 0.6$. It is **not** the probability that $\pi = 0.6$ when $\tilde Y = 8$. (I know this is confusing, but I wanted to make the distinction clear as many students forget about this.)
+
+When we look at the plot, we see that the likelihood is maximized around $\hat\pi = 0.8$. So, $0.8$ is a candidate for the parameter value that makes our data most likelyl. In fact, it can be shown that $\hat\pi = 0.8$ is the *unique* value of all possible values of $\pi$ that maximizes the likelihood function. (How can we be sure that it's not $0.80000001$ or $0.7999999$? An answer to this question is given in the appendix, but is by no means required for this course.) In Maximum Likelihood estimation, we choose this value $\hat \pi$ as our estimate for the true value of $\pi$ that has generated the data. It is, so to say, the parameter value that makes the observed data most likely (under the assumption that our model for the DGP is true).
+
+Maximum Likelihood Estimators (MLEs) have a lot of desirable properties, which makes them probably the most popular family of estimators across the social sciences. Notice however that we need to make a strong assumption about the data generating process, namely we must assume that we have knowledge of the family of distribution from which the data come from. We saw before that we don't need this assumption in the OLS case: if our dataset is sufficiently large, we can rely on the Central Limit Theorem to obtain the distribution of the OLS estimator, even if the assumption of Normally distributed errors is violated. So, whenever utilizing Maximum Likelihood Estimation, a key question becomes whether the distributional assumption is plausible and how robust our results are to violations of this assumption. 
+
+<br>
+
+# The Linear Probability Model (LPM)
+
+Let us return to regression analysis. Suppose that we have a binary outcome $Y_i \in \{0,1\}$, where we think that the success probability depends on a set of predictors $\mathbf{X}_i = \{X_{i1}, X_{i2}, ..., X_{i3}\}$. We might write this as $\pi_i = \pi_i(\mathbf{X}_i)$, where the subscript $i$ shows that the success probability will vary across units in our sample, and where we have emphasized that $\pi_i$ is a function of a set of predictors. 
+
+Now, if we have a binary variable $B \in \{0,1\}$ with $\Pr[B = 1] = p$. Then, by definition of expected value, we have 
+
+$$ \text{E}[B] = \sum_{b\in \{0,1\}} b\, \text{Pr}[B = b] = (1)\cdot p + 0\cdot (1-p) = p.$$
+
+The same holds for conditional expectations, so that we have 
+
+$$\text{E}[Y_i\,\vert\,\mathbf{X}_i = \mathbf{x}_i] = (1)\cdot \pi_i(\mathbf{x}_i) + 0\cdot (1-\pi_i(\mathbf{x}_i)) = \pi_i(\mathbf{x}_i),$$ 
+
+where the success probability is assumed to be a function of the values of the predictors. 
+
+In the LPM, we assume that $\pi_i(\mathbf x_i)$ is a linear function of the predictors. That is,
+
+$$ \pi_i(\mathbf X_i) = \text{E}[Y_i \, \vert\, \mathbf X_i] = \beta_0 + \beta_1 X_{i1} + \cdots +\beta_k X_{ik},\qquad i= 1,2,...,n.$$
+
+Notice that the equation looks *exactly* the same as the linear regression model we have considered in the previous labs. The only difference is that the outcome is a binary variable. So, we now already how to fit a LPM in R! Let's try it out.
+
+## Merging `data.table` objects in R
+
+Let us try to predict whether a respondent in the GSS voted for a Republican candidate in 2016 or a Democrat. In preparing the data, we will also learn how to **merge** two different `data.table`s, which is a very important skill in data management. Merging refers to the process of combining the *columns* of two datasets. Suppose dataset `D1` has information on income and education and dataset `D2` contains information on the marital status of *the same individuals*. If we merge these two datasets into a new dataset `D`, it will contain all of income, education, and marital status. To combine the columns of two dataset, we need information about which row in dataset `D1` should be matched with which row in dataset `D2`. For this reason it is important that both datasets contain at least one column that has information that uniquely identifies each unit of both datasets. We'll see what this means and how to use that information below.
+
+
+First, let us load some packages we need
+```{r, message = FALSE}
+# loading packages
+library("here")
+library("dplyr")
+library("data.table")
+library("dtplyr")
+library("ggplot2")
+```
+Let us first load the dataset with recoded variables, which we have used in the previous labs. This should be stored in the `your_working_directory/data` directory under the name `Lab6dat.csv`. To illustrate how to merge two datasets, we first load only a subset of the data:
+
+```{r}
+# load old data
+old_dat = fread(
+  here("data", "Lab6dat.csv"),
+  select = c("id",        # notice: THIS variable is new!
+             "ab_count_new", 
+             "pid", 
+             "log_inc", 
+             "female", 
+             "college")
+) %>%
+  setnames("ab_count_new", "abortion")
+```
+
+Two things to notice here: First, we have used the pipe (`%>%`) to rename the variable `ab_count_new` to `abortion` right after loading the data. The more important point to notice is that we have also loaded the `id` variable. A short look into the codebook will reveal that this is the "respondent id number." It is a number *unique* for each respondent in the dataset: if some respondent has the number $3$ no other respondent will have the same number assigned, so by knowing the `id` of a respondent we can uniquely identify the person. 
+
+Let us first check, whether `id` is indeed unique for each respondent. If so, the number of unique numbers in the `id` variable should be equal to the number of rows in the dataset:
+
+```{r}
+length(unique(old_dat$id)) == nrow(old_dat)
+```
+Looks good! This identifier is indispensable when we want to merge two datasets together. Next, let us load our second dataset. 
+
+```{r}
+# load a new set of variables
+new_dat = fread(
+  here("data", "Lab6dat.csv"),
+  select = c("id",
+             "pres16")
+)
+```
+
+> **EXERCISE** 
+>
+> 1. Figure out what the variable `pres16` is measuring by looking into the GSS codebook.
+> 2. Recode `pres16` such that it equals to 1 for respondents who voted for Trump, 0 for respondents who voted for Clinton, and NA for the rest. Name this variable `trump`.
+> 3. Write a code to check whether the recoding was successful.
+
+```{r, echo = F, results = "hide"}
+# recoding
+new_dat[
+  , trump := ifelse(pres16 == 1, 0,
+                    ifelse(pres16 == 2, 1, NA))
+]
+
+# check
+new_dat[, table(trump, pres16, useNA = "ifany")]
+```
+
+Now, to merge `new_dat` and `old_dat`, we use the `merge` function. 
+
+```{r}
+dat = merge(x = old_dat, 
+            y = new_dat, 
+            by = "id",
+            all.x = T)
+```
+
+There are two options (among others) that are especially important when using the `merge` function.
+
+1. We have to specify with the `by` option a *unique identifier* for the rows in *both* datasets. So, the rows in `old_dat` which have `id = 235` should refer to the same individuals (units) as the rows in `new_dat` for which `id = 235`. It is the unique identifier based on which, so to say, we match the rows of `old_dat` to that of `new_dat` in merging these `data.table`s.
+2. The option `all.x == T` is a little bit trickier. 
+    - Suppose that in the first dataset (`old_dat`) we have an individual with `id = 123` but that we cannot find any case in the second dataset (`new_dat`) that has the same `id` value. What should we do? If we *do not* specify the `all.x == T` option, this case would be dropped during the merging process (sometimes we want that, sometimes not). On the other hand, if we specify `all.x == T`, we will keep the case/unit but all variables that are contained in `new_dat` (but not in `old_dat`) are set to `NA` for this unit.
+    - The same can happen the other way around, namely we have a case in the second dataset (`new_dat`) for which we cannot find a case in the first dataset (`old_dat`) that has the same `id` value. If we want to drop these cases, we don't need to specify any options. If we want to keep these cases, we have to specify `all.y == TRUE`. In the latter case, all variables in `old_dat` that are not contained in `new_dat` will be set to `NA` for this unit
+    - If you want both `all.x == T` and `all.y == T`, you can simply specify `all == T`. 
+
+
+## Fitting LMP to data in R
+
+Now that we have merged the two datasets into a new dataset (`dat`), we can use the predictors that were in `old_dat` (i.e., `pid`, `linc`, and so on) to model the outcome variable that was contained in `new_dat` (i.e., `trump`).
+
+```{r}
+# fit LPM
+lpm = lm(trump ~ pid + log_inc + female + college, dat)
+
+# print summary
+summary(lpm)
+```
+>**EXERCISE** 
+>
+> 1. How may cases have we dropped do to missingness? Why are there so many?
+> 2. Interpret the intercept and coefficient of `pid`. 
+
+We might go one step further to create a plot of changes in the predicted probabilities as `pid` varies:
+
+```{r}
+# create new dataset for predictions
+pred_dat = data.table(
+  pid = 0:6,  # pid values to get predictions for
+  log_inc = median(dat$log_inc, # fix inc at median 
+                   na.rm = T), 
+  female = 0, # fix gender at male
+  college = 0 # fix education at less than BA
+)
+
+# predict probability of voting for Trump
+yhat = cbind(
+  pid = 0:6,
+  predict(lpm, newdata = pred_dat, type = "response",
+          interval = "confidence")
+) %>%
+  as.data.table
+
+# plot predicted probabilities (save plot in object lpm_plot)
+lpm_plot = ggplot(
+    yhat, 
+    aes(x = pid, y = fit)
+) +
+    # predicted probabilities
+    geom_line(col = "black") + 
+    # 95% CI
+    geom_ribbon(  
+        aes(ymin = lwr, ymax = upr),
+        fill = "grey",
+        alpha = .5, # transparency
+        col = NA    # color for border (no color)
+    ) +
+    # control x- and y-axis labels (\n means "line break")
+    scale_y_continuous(
+        name = "Predicted Probability\n",
+        breaks = seq(0, 1, .25)
+    ) +
+    scale_x_continuous(
+        name = "\nParty Identification",
+        breaks = seq(0, 6, 1)
+    ) + 
+    # add horizontal lines at zero and one
+    geom_hline(yintercept = c(0, 1),
+               linetype = 2) +
+    # add vertical lines at values of pid
+    geom_vline(xintercept = seq(0, 6, 1),
+               linetype = 3,
+               col = "grey") +
+    # change theme
+    theme_classic() +
+    # add title
+    ggtitle(
+        "Probability of Voting for Trump by Party ID",
+        subtitle = "Results from Linear Probability Model"
+    )
+
+# print the plot
+print(lpm_plot)
+```
+
+There are two things to notice:
+
+1. As the name of the model suggests, the predicted probability of voting for Trump is increasing *linearly* with our predictor.
+2. We see that the confidence interval at `pid = 0` (i.e., "Strong Democrats") and both the confidence interval and our fitted value at `pid = 6` (i.e., "Strong Republican") take on *impossible values*. There cannot be something like a probability that is smaller than zero or larger than 1.
+
+There is also the additional problem that the error distribution will not be homoskedastic, as it was discussed in the lecture on Monday. What are the possible remedies? There are, in fact, two: 
+
+1. If we discretize all of our predictors in our models, then at least our predicted values (although not necessarily the confidence intervals for the predictions) will all lie between zero and one. Why this is the case needs a deeper understanding of how the OLS model works and will not be discussed in detail here. Further, we might estimate heteroskedasticity-robust standard errors to overcome the problem of unequal variances of the error term.
+2. We can use a *non-linear* function to link our predictors to the outcome such that our predictions are guaranteed to lie between zero and one. The **Logistic Regression Model** with which we will deal below is *one* possible model that takes this approach.
+
+<br>
+
+# Logistic Regression
+
+Let us return to the problem we have started with. We want to model the probability that the outcome is equal to $1$ as a function of a set of predictors. To emphasize that the "success" probability is different across different individuals, we have added a subscript $i$ to the parameter $\pi$, resulting in the notation $\pi_i$. Further, to emphasize that we are modeling this probability as a function of a set of predictors, $\mathbf X_i$, which will be different for different individuals, we have written $\pi_i = \pi_i(\mathbf X_i)$.
+
+Now, in the LPM, we have modeled this probability as
+$$\pi_i(\mathbf X_i) = \beta_0 + \beta_1 X_{i1} + \cdots + \beta_k X_{ik}$$
+and we have observed that this formulation might lead to problems of over- or under-shooting the interval $[0,1]$. 
+
+> **EXERCISE** Notice that there is no error term in the last equation. Why?
+
+In Logistic Regression, we use a **link function** to connect the probability of interest with the predictors as follows:
+
+$$\pi_i(\mathbf X_i) = \text{logit}^{-1}\Big(\beta_0 + \beta_1 X_{i1} + \cdots + \beta_k X_{ik}\Big)$$
+
+The function $\text{logit}^{-1}$ used in this transformation is called the **logistic transformation** or the **inverse-logit function**. For a real number $x$, the inverse-logit function is defined as
+
+$$ \text{logit}^{-1}(x) = \frac{1}{1 + e^{-x}}.$$
+
+We can plot how this function looks like:
+
+```{r}
+# some x-values on which to plot the function g
+x = seq(-5, 5, .1)
+
+# define function g
+inv_logit = function(a) {
+  
+  1 / (1 + exp(-a))
+  
+}
+
+# plot x and g(x)
+plot(x, inv_logit(x), type = "l")
+```
+We see that this function is strictly increasing. Further, $\text{logit}^{-1}(x)$ will approach $1$ as $x \rightarrow \infty$ and approach $0$ as $x \rightarrow -\infty$. 
+```{r}
+c(inv_logit(-Inf), inv_logit(Inf))
+```
+Recall that for any specific individual $i$, the linear combination $\beta_0 + \beta_1 X_{i1} + \cdots + \beta_k X_{ik}$ will be just a single number. So, by plugging in this combination in the place of $x$ in the inverse-logit function, the logistic regression model can be expressed as
+
+$$\begin{aligned}
+\pi_i(\mathbf X_i) &= \text{logit}^{-1}\Big(\beta_0 + \beta_1 X_{i1} + \cdots + \beta_k X_{ik}\Big) \\
+&= \frac{1}{1 + e^{-(\beta_0 + \beta_1 X_{i1} + \cdots + \beta_k X_{ik})}}.
+\end{aligned}$$
+
+We can, in fact, go one step further. Just for notational simplicity, let us write $\mathbf x_i' \boldsymbol\beta = \beta_0 + \beta_1 X_{i1} + \cdots + \beta_k X_{ik}$. Now, we notice the following:
+$$\begin{aligned}
+&& \pi_i &= \frac{1}{1 + e^{-\mathbf x_i' \boldsymbol\beta}} & \\
+\implies &&\pi_i &= \frac{e^{\mathbf x_i' \boldsymbol\beta}}{1 + e^{\mathbf x_i' \boldsymbol\beta}} & \text{Mult. Denom. and Num. by $e^{\mathbf x_i' \boldsymbol\beta}$}\\
+\implies &&\pi_i(1+e^{\mathbf x_i' \boldsymbol\beta}) &= e^{\mathbf x_i' \boldsymbol\beta} &\text{Mult. both sides by $(1+e^{\mathbf x_i' \boldsymbol\beta})$} \\
+\implies && \pi_i + (\pi_i - 1)e^{\mathbf x_i' \boldsymbol\beta} & = 0& \text{Rearrange}\\
+\implies && e^{\mathbf x_i' \boldsymbol\beta} &= \frac{\pi_i}{1-\pi_i} &\text{Move over all terms involving $\pi_i$ to the right}\\
+\implies && \mathbf x_i' \boldsymbol\beta & = \log\left(\frac{\pi_i}{1-\pi_i}\right) &\text{Take logarithm of both sides}
+\end{aligned}$$
+So, we have 
+
+$$ \log\left(\frac{\pi_i}{1-\pi_i}\right) = \beta_0 + \beta_1 X_{i1} + \cdots + \beta_k X_{ik},$$
+
+which is probably the more familiar form of the logistic regression model. The function on the left-hand side of the last equation---namely, $g(x) = \log[x / (1 - x)]$---is called the **logit** function. So, our last equation can be also written as
+
+$$ \text{logit}(\pi_i) = \beta_0 + \beta_1 X_{i1} + \cdots + \beta_k X_{ik}.$$
+
+## Estimation and Fitting in R
+
+The parameters of the logistic regression model, $\boldsymbol\beta = \{\beta_0, \beta_1,...,\beta_k\}$, are estimated via the method of maximum likelihood we have discussed above. In other words, estimation proceeds by formulating the likelihood function and finding the value $\boldsymbol{\hat\beta}$ that maximizes the likelihood. We will not go into estimation in detail here, but rather defer the discussion to an appendix.
+
+Fitting a logistic regression in R is fairly easy. If we use the same predictors as those of the LPM discussed above, the code to fit the logistic regression is
+
+```{r}
+# fit logistic regression model (glm)
+l_reg = glm(
+    trump ~ pid + log_inc + female + college, # formula of regression
+    family = binomial(link = "logit"),        # specifying the dist. of outcome
+    data = dat                                # data
+)
+
+# check the class of the object
+class(l_reg)
+
+# summarize results
+summary(l_reg)
+```
+
+As the `summary` for linear regression models, the table has a lot of information (maybe too much!):
+
+1. The coefficients in the `Estimate` column show the estimated regression coefficients, i.e., the $\hat\beta_k$'s. For example, the coefficient of the `pid` variable suggests that a unit increase in `pid` is associated with a `1.206` increase in the *logit* of the probability of voting for Trump. This sounds a little bit weird, but recall that the equation we are estimating has the form 
+$$\text{logit}(\pi_i) = \beta_0 + \beta_1 \text{pid}_{i} + \cdots + \beta_k \text{college}_{i}.$$ So, our prediction equation looks like: $$\text{logit}(\hat \pi_i) = \hat\beta_0 + \hat\beta_1 \text{pid}_{i} + \cdots + \hat\beta_k \text{college}_{i}.$$
+Both of the equations are linear. So, we can interpret the coefficients in the same way as in the linear regression model, except the fact that the outcome is not the probability per se but the *logit-transformation of the probability*.
+2. We might also interpret the coefficients in terms of *odds* by exponentiating them. The interpretation can be derived as follows. Suppose we fix all other variables, except for `pid`, at specific values. These will then be constants, so we have a prediction equation of
+$$\text{logit}(\hat \pi_i) = \log\left(\frac{\hat\pi_i}{1-\hat\pi_i}\right) = \hat\beta^\ast + \hat\beta_1 \text{pid}_{i},$$
+where $\hat\beta^\ast$ is the constant plus the linear combination of the variables we have fixed and their estimated coefficients. Now, suppose we set $\text{pid}_{i1} = b$ where $b$ is just any number. Let the predicted probability of the outcome at these values be $\hat\pi_i(b)$ and the corresponding predicted odds $\hat O(b) = \pi_i(b) / (1-\pi_i(b)$. Then, exponentiating both sides of the prediction equation, we obtain
+$$\hat O(b) = \frac{\pi_i(b)}{1-\pi_i(b)} = \exp\Big({\hat\beta^\ast + \hat\beta_1b}\Big).$$
+The predicted odds when $\text{pid}_i$ is equal to $b + 1$ are
+$$\hat O(b + 1) = \exp\Big[{\hat\beta^\ast + \hat\beta_1(b + 1)}\Big] =\exp\Big({\hat\beta^\ast + \hat\beta_1b + \hat\beta_1}\Big) = \exp\Big({\hat\beta^\ast + \hat\beta_1b}\Big)\, \exp\Big({\hat\beta_1}\Big).$$
+Now, dividing $\hat O(b + 1)$ by $\hat O(b)$ we obtain
+$$\frac{\hat O(b + 1)}{\hat O(b)} = \frac{\exp\Big({\hat\beta^\ast + \hat\beta_1b}\Big)\, \exp\Big({\hat\beta_1}\Big)}{\exp\Big({\hat\beta^\ast + \hat\beta_1b}\Big)} = \exp\Big({\hat\beta_1}\Big).$$
+Notice that the left-hand side of this equation is a ratio of two odds (often called an *odds ratio*). It shows the **relative increase in the predicted odds** when $\text{pid}_i$ increases by one unit from the baseline value $b$: if $\hat O(b) = 100$ and $\hat O(b + 1) = 200$, for example, the ratio is $2$, showing that the odds double when $\text{pid}_i$ increases from $b$ to $b + 1$. Hence, the odds of the outcome are predicted to increase by a **factor of** $e^{\hat\beta_1}$ for each unit increase in $\text{pid}_i$. 
+
+3. Another point to notice is that this relationship will hold *regardless of what values we fix the rest of the variables and regardless of the baseline value we have chosen*: whatever values we choose for the other variables, this will only change $\hat\beta^\ast$, which is canceled out in the nominator and denominator when calculating the ratio of the odds. The same holds for the value $b$ we have chosen as our baseline of the unit increase. Thus, again, we might use the phrase "when other variables are hold constant," which we have used in interpreting the coefficients of the linear regression model when interpreting the exponentiated coefficients of logistic regression models. For example, when interpreting the coefficient of `pid`, we might say, "holding other variables in the model constant, the model predicts that the odds of voting for Trump increases **by a factor of** $e^{\hat\beta_1}$ when `pid` increases by one unit."
+
+3. A similar interpretation is also possible for negative coefficients. For example, let $\hat\beta_3$ be the coefficient of the `female` variable. Suppose that $\hat\beta_3 = - 0.7$. Then, $e^{\hat\beta_3} \approx 0.5$. This would imply that women are predicted to have about half the odds of men to vote for Trump, holding other variables in the model constant. Notice that the interpretation is **not** that the odds were 0.5 units lower; you have to *multiply* the odds by the exponentiated regression coefficients. This leads to the interpretation of the odds are predicted to be lower by a *factor* of 0.5, which means that they were half that of men.  
+
+4. Calculating the exponentiated regression coefficients is straightforward in R. We use the `coef` function to extract the estimated coefficients from the model and, then, use the `exp` function:
+    ```{r}
+    # extract coefficients
+    l_coef = coef(l_reg)
+  
+    # print coefficients and their exponentiated form
+    rbind(coef = l_coef,
+          exp_coef = exp(l_coef))
+    ```
+> **EXERCISE** 
+> 
+> 1. Interpret the coefficient of `log_inc` and `college` in terms of odds ratios.
+> 2. What are the predicted odds of voting for Trump for an individual with the following covariate profile: `log_inc == 10`, `female == 0`, `college == 0`, `pid == 3`?
+
+## Problems with Odds
+
+Now, there are two problems with the odds interpretation:
+
+1. Although the odds-ratio will increase at a rate of $\exp(\beta)$ regardless of the chosen baseline value, the *substantive interpretation* of how much the odds have increased (in absolute value) will depend on the baseline value. For example, an increase by a factor of $2$ from a baseline of $\hat O = 0.0001$ means that the the odds increased by $0.0001$. If the baseline is, on the other hand, $\hat O = 1,000$ an increase by a factor of $2$ means that the odds increased by $2,000$. In both cases, we have doubled the baseline, but the absolute changes in the odds are very different.
+2. The second problem is that not many social scientists are able to understand what odds are (at least not intuitively)! For example, doubling the odds of an outcome is not the same as the doubling of probability of that outcome. The first means $2\times \pi / (1-\pi)$, the second means $2\times \pi$. These are not the same. But while most people would understand (intuitively) the second, they won't understand the first.
+
+## Predicted Probabilities
+
+So, it is always a good idea to plot the predicted probabilities (both for yourself and for your readers). In other words, we want to plot how the probability of the outcome changes when we vary a focal variable while fixing the remain variables at certain values. 
+
+In R, doing this is quite straightforward. We have already created a new dataset for which we want the predictions above (when plotting the predicted probabilities using the LPM). Let us use the exact same dataset again. 
+```{r}
+# predict probability of voting for Trump (using logit model)
+yhat_logit = cbind(
+  pid = 0:6,
+  predict(l_reg,  # model object is different!
+          newdata = pred_dat, # data for prediction is the same!
+          type = "response")
+) %>%
+  as.data.table
+```
+By using the `type = "response"` option, we will obtain the predicted probabilities. Notice, however, that we have *not* specified the `interval` option. The reason for this is simple: the option will not work when we apply the `predict` function to an object of class `glm`. Instead, we have to calculate the confidence interval by hand.
+
+There are many different ways to do this (for example, Stata's `margins` command will use the *delta-method*, which I don't recommend). Here we explore a very simple method. 
+
+1. Instead of predicting the probability of the outcome, we can predict the *predicted logit* by specifying the option `type = "link"` in the `predict` function. It can be shown that the sampling distribution of the predicted logits follow a Normal distribution in large samples. 
+2. We can also specify the option `se.fit = TRUE` in the `predict` function for `glm` classes. This will give us the standard error of the predicted logits.
+3. As the predicted logits are Normally distributed in large samples, we can use thee estimated standard errors to calculate the 95% confidence intervals of the predicted logits. These intervals will have the form $\text{logit}(\hat\pi_i) \pm 1.96 \times  \widehat{\text{S.E.}}(\text{logit}(\hat\pi_i))$.
+4. This will give us the confidence interval for the predicted logits. But we want the 95% CIs for the predicted probabilities! Here we use the fact that the inverse-logit function is a strictly increasing function and just apply the function to both end-points of the confidence interval. This will give us the confidence interval for the predicted probabilities. That is, if the 95% CI for the predicted logits has the form $(a, b)$, then interval $(\text{logit}^{-1}(a), \text{logit}^{-1}(b))$ will be the 95% confidence interval for the predicted probabilities.
+
+In R, we can do this as follows:
+```{r}
+# predict the logit and standard errors
+pred_logit = predict(
+    l_reg, 
+    newdata = pred_dat,
+    response = "link",
+    se.fit = TRUE
+) %>%
+    as.data.table %>%
+    select(fit, se.fit)
+
+# calculate 95% CI for logits 
+pred_logit[
+  , `:=`(lwr = fit - 1.96 * se.fit, # lower bound
+         upr = fit + 1.96 * se.fit, # upper bound
+         se.fit = NULL)             # drop se
+]
+
+# apply inverse-logit function to get pred. probs and CI
+pred_p = pred_logit[
+  # apply inverse-logit function to all columns
+  , lapply(.SD, inv_logit)
+][
+  # add values of pid
+  , pid := pred_dat$pid
+]
+
+# plot predicted probabilities (save plot in object l_plot)
+l_plot = ggplot(
+    pred_p, 
+    aes(x = pid, y = fit)
+) +
+    # predicted probabilities
+    geom_line(col = "black") + 
+    # 95% CI
+    geom_ribbon(  
+        aes(ymin = lwr, ymax = upr),
+        fill = "grey",
+        alpha = .5, # transparency
+        col = NA    # color for border (no color)
+    ) +
+    # control x- and y-axis labels (\n means "line break")
+    scale_y_continuous(
+        name = "Predicted Probability\n",
+        breaks = seq(0, 1, .25)
+    ) +
+    scale_x_continuous(
+        name = "\nParty Identification",
+        breaks = seq(0, 6, 1)
+    ) + 
+    # add horizontal lines at zero and one
+    geom_hline(yintercept = c(0, 1),
+               linetype = 2) +
+    # add vertical lines at values of pid
+    geom_vline(xintercept = seq(0, 6, 1),
+               linetype = 3,
+               col = "grey") +
+    # change theme
+    theme_classic() +
+    # add title
+    ggtitle(
+        "Probability of Voting for Trump by Party ID",
+        subtitle = "Results from Logistic Regression Model"
+    )
+
+# print plot
+print(l_plot)
+```
+
+Notice that all the predictions and the corresponding confidence intervals lie between zero and one, as desired. Furthermore, we see that our model predicts that the probability voting for Trump is almost zero for Strong Democrats (`pid == 0`) and almost one for Strong Republicans (`pid == 1`). This is a much more intuitive presentation of your results (or the meaning of the estimated regression coefficients) than an exponentiated coefficient of 3.341. So, whenever you run these models you should try to plot the predicted probabilities.
+
+Lastly, we can use the `gridExtra::grid.arrange` function to compare the LPM and the logistic regression model:
+
+```{r, fig.width = 8.5}
+gridExtra::grid.arrange(lpm_plot, l_plot, nrow = 1)
+```
+
+>**EXERCISE** Do these results seem reasonable to you? If not, what might have gone wrong in our analysis? 
+
+## Treating `pid` as a Categorical Variable
+
+One thing to notice is that the variable `pid` is treated as a continuous variable. So, we are assuming that a one unit increase in `pid` is associated with the same increase in the logits regardless of where on the `pid` scale that increase starts. This assumption can sometimes lead to misleading conclusions. For example, if Strong Democrats (`pid == 0`) have a very low probability of voting for Trump and Strong Republicans (`pid == 6`) a very high probability to do so, the regression results would suggest that that there is a positive and linear relationship between `pid` and the logit, regardless of what happens in the middle of the `pid` variable.
+
+So, let us take a slightly different approach to study the relationship between party identification and the two-party vote choice. Namely, let us treat `pid` as a categorical, rather than a continuous, variable. Everything that changes is just that we add `pid` into our regression model as a `factor` variable
+
+```{r}
+# create a factor out of pid
+dat[, pid_fact := factor(pid)]
+
+lf_reg = glm(
+    trump ~ pid_fact + log_inc + female + college,
+    family = binomial(link = "logit"),
+    data = dat
+)
+
+# check the class of the object
+class(lf_reg)
+
+# summarize results
+summary(lf_reg)
+```
+>**EXECRCISE** Interpret the coefficients of the dummy variables that represent different categories of the `pid` variable.
+
+Let us try to plot the relationship between the predicted probabilities and the `pid` under this new specification.
+```{r}
+pred_dat_f = copy(pred_dat)
+```
+
+## Deep and Shallow Copies of `data.table` objects
+
+First, we `copy` the old `pred_dat` object into a new object named `pred_dat_f`. The reason why we need to use the `copy` function is the following: if we *do not* use this function, R will create only a reference to `pred_dat`. While this concept of "reference" is beyond the requirement of this course, let me give you a simple illustration of what can go wrong if we don't use the `copy` function:
+```{r}
+# create arbitrary data.table object
+tmp_df = data.table(x = 1, y = 2)
+
+# use copy function to make a deep copy
+deep_copy = copy(tmp_df)
+
+# change new object
+deep_copy[, x := "a"]
+
+# check two objects
+tmp_df
+deep_copy
+```
+This is the expected behavior: only `deep_copy` has changed. But if we **don't** use `copy` function, we get different results:
+```{r}
+# don't use copy function
+shallow_copy = tmp_df
+
+# change new object
+shallow_copy[, x := "a"]
+
+# check two objects
+tmp_df
+shallow_copy
+```
+We see that **both** `tmp_df` and `shallow_copy` were changed by changing `shallow_copy`! If we don't use the `copy` function, R will not "create," so to say, a new object but just create an "alias" of the original object. This is often very efficient when dealing with large object, but it can lead to these unexpected results. So, whenever you use a code that looks like
+```
+new.data.table.object = old.data.table.object
+```
+you have to think about whether you want a **deep copy** (i.e., create a new R object) in which case you want to use the `copy` function, or whether you want to have a **shallow copy** (i.e., create only an alias of the original object) in which case you *don't* want to use the `copy` function. 
+
+One last thing about deep and shallow copies: if you change a `data.table` object and then assign it to a new R object, R will always create a deep copy. Here is an example
+```{r}
+# create original data.table object againa
+tmp_df = data.table(x = 1, y = 2)
+
+# creat a new object by adding a new row
+new_df = rbind(tmp_df, data.table(x = "hello", y = "hi"))
+
+# change new_df
+new_df[x == "hello", x := "not hello"]
+
+# check results 
+tmp_df
+new_df
+```
+We see that only `new_df` has changed. Similarly:
+```{r}
+# squaring all numbers in tmp_df and assign to new_df2
+new_df2 = tmp_df[, lapply(.SD, function (w) { w^2 })]
+
+# change new_df2 
+new_df2[, y := y + 10]
+
+# check results
+tmp_df
+new_df2
+```
+Again, only `new_df2` has changed. 
+
+I know that this can be confusing at first. The general advice is to always check your results until you are sure whether you used the right code or not.
+
+## Predicted Probabilities with Categorical Predictors
+
+So, let us get back to creating predicted probabilities. We have made a deep copy of the `pred_dat` object, when we look into the `pid` column of this object, we see that it's not a `factor` variable:
+```{r}
+pred_dat$pid %>% class
+```
+So, we first change it into the same factor as that in our GSS dataset:
+```{r}
+# change pid into a factor
+pred_dat_f[, pid_fact := factor(pid)]
+
+# check whether the factors in both dat and pred_dat have the same labels
+levels(factor(dat$pid))
+levels(pred_dat_f$pid_fact)
+```
+
+Next, we predict the outcome:
+
+```{r}
+# predict the logit and standard errors
+fpred_logit = predict(
+    lf_reg, 
+    newdata = pred_dat_f,
+    response = "link",
+    se.fit = TRUE
+) %>%
+    as.data.table %>%
+    select(fit, se.fit)
+
+# calculate 95% CI for logits 
+fpred_logit[
+  , `:=`(lwr = fit - 1.96 * se.fit, # lower bound
+         upr = fit + 1.96 * se.fit, # upper bound
+         se.fit = NULL)             # drop se
+]
+
+# apply inverse-logit function to get pred. probs and CI
+fpred_p = fpred_logit[
+  # apply inverse-logit function to all columns
+  , lapply(.SD, inv_logit)
+][
+  # add values of pid
+  , pid := pred_dat_f$pid
+]
+
+# plot predicted probabilities (save plot in object fl_plot)
+fl_plot = ggplot(
+    fpred_p, 
+    aes(x = pid, y = fit)
+    ) +
+    # add line
+    geom_line(
+        col = "grey50", 
+        linetype = 2
+    ) + # add 95% CI at different values of x
+    geom_errorbar(  
+        aes(ymin = lwr, ymax = upr),
+        col = "grey50",
+        width = .15    # width of error bar
+    ) +
+    # point estimates of predicted probabilities
+    geom_point(col = "black") + 
+    # y-axis labels (\n means "line break")
+    scale_y_continuous(
+        name = "Predicted Probability\n",
+        breaks = seq(0, 1, .25)
+    ) + 
+    # add labels to the numbers on the x-axis
+    scale_x_continuous(
+        name = "\nParty ID",
+        breaks = 0:6,
+        labels = c("Strong Democrat",
+                   "Democrat",
+                   "Democrat Leaning",
+                   "Independent",
+                   "Republican Leaning",
+                   "Republican",
+                   "Strong Republican")
+    ) + 
+    # add horizontal lines at zero and one
+    geom_hline(yintercept = c(0, 1),
+               linetype = 2) +
+    # change theme
+    theme_classic() +
+    # add title
+    ggtitle(
+        "Probability of Voting for Trump by Party ID",
+        subtitle = "Results from Logistic Regression Model"
+    ) +
+    theme(
+        axis.text.x = element_text(
+            angle = 90, hjust = 1, vjust = .5
+        )
+    )
+
+# print plot
+print(fl_plot)
+```
+
+So, we see that the main difference lies between respondents who lean toward the Democratic party and those who lean toward the Republican party, a subtle pattern that was not adequately captured when we treated `pid` as a continuous variable.
+
+Before concluding this lab, there is one **very important thing** that needs to be mentioned: the predicted probabilities will look different according to which values you fix the other variables. Recall that we have fixed `log_inc` at its median and `female` and `college` at zero. So the predictions we have plotted so far are predictions for men without college degree and a median income. The pattern at which the predicted probabilities vary with party identification will be different , for example, if we have made the predictions for women with a college degree. You can show this by just plotting these predictions out:
+
+>**EXERCISE** Return to the scenario in which we have treated `pid` as a continuous variable. Generate a plot of the predicted probabilities as `pid` varies, but, this time, fix `log_inc`, `female`, and `college` at `9`, `1`, and `1`, respectively.
+
+<br>
+
+# Appendix
+
+As always, the material in the appendix is by no means required for the course and is only provided for the curious. Still, I believe Appendix I on `melt`ing and `dcast`ing `data.table` objects will be very useful for you
+
+## Appendix I: `melt` and `dcast` functions
+
+In this appendix, I describe some useful functions that are often used in data manipulation. Let us start with a random dataset. 
+```{r}
+# number of observations
+n = 5
+
+# a set of means
+mu = c(0, 5, 10, 25)
+
+# a dataset where each column draws a normal with means in mu
+dat = as.data.table(
+    lapply(mu, function(w) { rnorm(n, w, 1.0) })
+) %>%
+  setnames(paste0("x", 1:length(mu)))
+
+# generate a row-identifier & move id to the first column
+dat[, id := 1:.N] %>%
+  setcolorder("id")
+
+# print
+print(dat)
+```
+
+Here the variables `x1` to `x4` could be anything, such as measurement of some variable over four time points or different characteristics of an individual identified by the column `id`. Now, suppose I want to reshape this datset so that, for each `id`, I have four rows, where each of the rows contain the information for the variables `x1` to `x4`. This form of data is often referred to as **long-form**. To reshape the current dataset into long-form, we can use the `melt` function.
+
+```{r}
+# reshape data into long-form
+long_dat = melt(
+  dat,               # dataset to reshape
+  id.vars = "id"     # variable name to group observations
+) %>%
+  # sort dataset by id
+  setorder(id)
+
+# print dataset
+print(long_dat)
+```
+We see that two new variables are created: a column named `variable` to show the names of the original variables and a column named `value` which contains the values of the old dataset. So, the row with `id == 1` and `x1 == "x1"` will contain in its `value` column the value that was in the first row and the first column of the old dataset.
+
+To move from this format back to the original format (which is often called the **wide form**), we can use the `dcast` function as follows:
+```{r}
+# reshape from long to wide
+wide_dat = dcast(
+  long_dat,           # datset to reshape
+  id ~ variable,      # formula to cast
+  value.var = "value" # variable to fill the created data.table
+)
+# note: on the left of ~ should be the variable we have used in the
+#       "id.vars" option when melting the data.table; on the right of ~
+#       should be the variables that should become the columns of the
+#       reshaped dataset; the value.var should be the name of the 
+#       variable with which the reshaped data.table should be filled
+
+print(wide_dat)
+```
+We might also check whether the recreated dataset is identical with the old one:
+```{r}
+all.equal(wide_dat, dat, check.attributes = F)
+```
+So, they are identical. 
+
+At first, the `melt` and `dcast` functions might appear mysterious, but by repeatedly using them, you'll get a feeling of how to work with them (and you'll appreciate that they are there!). Also, this is just the tip of the iceberg of what you can do with the `melt` and `dcast` functions. I would follow the cheat sheet [here](https://cran.r-project.org/web/packages/data.table/vignettes/datatable-reshape.html) to learn how to use these functions efficiently.
+
+## Appendix II: Finding the MLE in the Coin-Flipping Example
+
+In the introduction to Maximum Likelihood Estimation, I have just stated that $\hat \pi = 0.8$ is the unique value that maximizes the likelihood function. To show that this is indeed the case, we need to rely on some calculus. 
+
+Recall that the likelihood function is given as
+$$L(\pi) = \binom{10}{8}\pi^{8}(1-\pi)^{2}$$
+Because the logarithm is a strictly increasing function, the value of $\pi$ that maximizes the likelihood will also be the value that maximizes the logarithm of the likelihood:
+$$\ell(\pi) = \log L(\pi) = \log\binom{10}{8} + 8\log \pi + 2\log(1-\pi).$$
+The function $\ell(\pi)$ is called (surprise!) the **log-likelihood**. It is often much easier to maximize the log-likelihood than the likelihood itself, which is the reason why we take the logarithm of the likelihood function. 
+
+Now, we observe that $\ell(\pi)$ is differentiable with respect to $\pi$ in the interior of the interval $[0,1]$. By taking the derivative with respect to $\pi$ and setting it to zero, we obtain:
+
+$$ \frac{\text{d} \ell(\pi)}{\text{d} \pi} = \frac{8}{\pi} - \frac{2}{1-\pi} =0$$
+
+Solving this equation for $\pi$ will give us the critical point:
+
+$$\hat\pi = 0.8.$$
+
+which is our MLE. Of course, in general, $0.8$ might be a local maximum as well as a local minimum. I'll leave checking that this is indeed a global maximum as an exercise for you.
+
+## Appendix III: Finding the MLE of Logistic Regression Coefficients
+
+Consider a logistic regression with a binary outcome $Y_i \in \{0,1\}$ and predictors $X_{i1},X_{i2},...,X_{ik}$, and suppose we have an iid sample $\{Y_i, X_{i1}, ...,X_{ik}\}_{i=1}^n$ of size $n$. Let $\mathbf x_i = [X_{i1},...,X_{ik}]$ and define $p_i(\mathbf x_i) = \Pr[Y_i=1\,\vert\, \mathbf x_i]$, i.e., the conditional probability that the $i$th outcome is equal to one given the predictors. (Notice that the notation gets a little bit messy here, and we use lower case bold face letters to denote both random vectors as well as realizations of them.) 
+
+Clearly, $\Pr[Y_i = 0\,\vert\, \mathbf x_i] = 1-\Pr[Y_i=1 \,\vert\, \mathbf x_i]$, so that we can compactly write $\Pr[Y_i = y_i \,\vert\, \mathbf x_i] = p_i(\mathbf x_i)^{y_i}(1-p_i(\mathbf x_i))^{1-y_i}$. Given that we have a random sample, the joint distribution of $\mathbf Y = [Y_1,...,Y_n]$ conditional on the predictor matrix $\mathbf X = [\mathbf x_1', ..., \mathbf x_n']'$ factors into the product of the marginal distributions:
+$$\Pr[\mathbf Y = \mathbf y \,\vert\, \mathbf X] = \prod_{i=1}^n \Pr[Y_i = y_i \,\vert\, \mathbf x_i] = \prod_{i=1}^n p_i(\mathbf x_i)^{y_i}(1-p_i(\mathbf x_i))^{1-y_i}.$$ 
+
+The logistic regression model consists of specifying the functional form that links $p_i$ to $\mathbf x_i$as
+$$p_i(\mathbf x_i) = \text{logit}^{-1} ( \mathbf x_i' \boldsymbol\beta),$$ 
+where $\boldsymbol\beta$ is a $k$ dimensional vector of parameters. Hence, the _likelihood function_ of the logistic regression model is simply the joint distribution parameterized through $\boldsymbol\beta$ and treated as a function of $\boldsymbol\beta$. That is,
+$$L(\boldsymbol\beta) = \text{Pr}_{\boldsymbol\beta}[\mathbf Y = \mathbf y |\mathbf X] = \prod_{i=1}^n \Big[\text{logit}^{-1}(\mathbf x_i'\boldsymbol\beta)\Big]^{y_i}\Big[1-\text{logit}^{-1}(\mathbf x_i' \boldsymbol\beta)\Big]^{1-y_i}.$$
+Taking the logarithm of both sides of this expression will give us the  _log-likelihood_ 
+$$
+\ell(\boldsymbol\beta) = \log L(\boldsymbol\beta) = \sum_{i=1}^n \left\{y_i \log\Big[\text{logit}^{-1}(\mathbf x_i'\boldsymbol\beta)\Big] + (1-y_i)\log\Big[1-\text{logit}^{-1}(\mathbf x_i'\boldsymbol\beta)\Big] \right\}.$$
+
+The log-likelihood function of the logistic regression model is a smooth and strictly concave function of $\boldsymbol\beta$ on $\mathbb R^k$. Thus, there exists a unique maximum, and it can be found by differentiating $\ell(\boldsymbol\beta)$ with respect to $\boldsymbol\beta$ and setting the gradient to zero. By doing so, we obtain the _likelihood equations_:
+$$\mathbf X'(\mathbf y- \mathbf p) = \mathbf 0,$$
+where $\mathbf p = \text{logit}^{-1}(\mathbf X\boldsymbol\beta)$ (again, we have overloaded notation a little bit by using $\text{logit}^{-1}$ as a element-wise transformation of the vector $\mathbf X\boldsymbol\beta$). The parameter vector $\hat{\boldsymbol\beta}$ that satisfies these equations is the _Maximum Likelihood estimator_.
+
+Let us go through the derivation step by step. First, let us rewrite the log-likelihood as
+$$\begin{aligned}
+\ell(\boldsymbol\beta) &= \sum_{i=1}^n\left\{y_i \log \left[\frac{\text{logit}^{-1}(\mathbf x_i'\boldsymbol\beta)}{1-\text{logit}^{-1}(\mathbf x_i'\boldsymbol\beta)}\right]+1-\text{logit}^{-1}(\mathbf x_i'\boldsymbol\beta)\right\}\\
+&= \sum_{i=1}^n \left\{ y_i \mathbf x_i' \boldsymbol\beta - \log \Big[1+\exp(\mathbf x_i' \boldsymbol\beta)\Big]\right\}
+\end{aligned}$$
+As $\ell(\boldsymbol\beta)$ is a real number, and we are going to differentiate this function with respect to the column-vector $\boldsymbol\beta$, the results has to be a column-vector as well. First, consider differentiating $\ell(\boldsymbol\beta)$ with respect to the $\beta_j$, the $j$th element of $\boldsymbol\beta$. Notice that $\mathbf x_i' \boldsymbol\beta = x_{i1}\beta_1 + x_{i2}\beta_2 + \cdots + x_{ij}\beta_j + \cdots + x_{ik}\beta_k$, so that $(\partial/\partial\beta_j) \mathbf x_i'\boldsymbol\beta$ is simply $x_{ij}$. Thus, the partial derivative of $\ell(\boldsymbol\beta)$ with respect to $\beta_j$ is
+$$\begin{aligned}
+\frac{\partial \ell(\boldsymbol\beta)}{\partial\beta_j} &= \sum_{i=1}^n \left\{y_i x_{ij} - \frac{\exp(\mathbf x_i\boldsymbol\beta)}{1+\exp(\mathbf x_i'\boldsymbol\beta)}x_{ij}\right\} \\
+&= \sum_{i=1}^n (y_i - p_i)x_{ij} \\
+&= \mathbf {x}^{(j)'}(\mathbf y - \mathbf p), 
+\end{aligned}$$
+as $p_{i} = \text{logit}^{-1}(\mathbf x_i' \boldsymbol\beta) = \exp(\mathbf x_i\boldsymbol\beta)/[1+\exp(\mathbf x_i\boldsymbol\beta)]$. Here $\mathbf x^{(j)}$ denotes the $j$th column of the predictor matrix $\mathbf X$. Stacking all the $j$ partial derivatives into a column-vector, we obtain
+$$\frac{\partial\ell(\boldsymbol\beta)}{\partial\boldsymbol\beta} = \begin{bmatrix} \mathbf x^{(1)'} (\mathbf y - \mathbf p) \\ \vdots \\ \mathbf x^{(j)'} (\mathbf y - \mathbf p) \\ \vdots \\ \mathbf x^{(k)'}(\mathbf y - \mathbf p)\end{bmatrix} = \mathbf X'(\mathbf y- \mathbf p),$$
+as desired. 
+
+Unfortunately, the there is no closed-form solution for the likelihood equations. Rather, we have to rely on numerical optimization routines to find the vector $\boldsymbol{\hat\beta}$ that satisfies the equation. The three most often used routines are the Newton-Raphson algorithm, Fischer Scoring, Iterative Reweighted Least Squares (IRLS). For large datasets, a limited memory quasi-Newton routine (L-BFGS) is often a good choice. Maybe we'll have the opportunity to discuss these routines in another appendix. 
