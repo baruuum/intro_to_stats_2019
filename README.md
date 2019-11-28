@@ -26,3 +26,4 @@ If you find any errors or typos, or anything you want to add, please shoot me a 
 exercises in plotting via ggplot, a small simulation exercise
 2. Hypothesis testing, t- and chi-squared tests, statistical power, correlations and linear regression
 3. Assumptions of the Linear Regression Model, interactions, stripes in residuals-versus-fitted plots
+4. Simpson's Paradox, Fixed and Random Effects
