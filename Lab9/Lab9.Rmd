@@ -764,6 +764,7 @@ ggplot(pred_dat, aes(x = x2, y = fit, col = outcome)) +
         option = "A")
 
 ```
-We see that the predicted probabilities are precisely estimated, which is also expected as we have a sample size of `n = 5000`. 
+We see that the predicted probabilities are precisely estimated---i.e., the confidence intervals tendt to be narrow---which is also expected as we have a sample size of `n = 5000`. A similar approach can be used for the multinomial logit model. I'll leave that as a future exercise to you.
 
-A similar approach can be used for the multinomial logit model. I'll leave that as a future exercise to you.
+Another question that is important to pursue whenever you create your own function to estimate something like confidence intervals is whether these intervals indeed contain the true parameter with the correct confidence level over repeated samples. This question is examined separately [somewhere else](https://barumpark.com/blog/2019/Ologit-Predict/); you might follow that link if you are curious.
+
