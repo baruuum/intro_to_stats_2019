@@ -19,6 +19,7 @@ If you find any errors or typos, or anything you want to add, please shoot me a 
 7. Multiple Linear Regression III: Fitting Multiple Regression Models to Data, Interaction Effects, Heteroskedasticity-robust Covariance Matrix Estimation.
 8. Binary Outcomes, Maximum Likelihood Estimation, Linear Probability Model, Logistic Regression, Predicted Probabilities
 9. Latent Variable Formulation of the Logit/Probit Model, Ordered and Multinomial Logistic Regression, Simulation-based Confidence Intervals for Predicted Probabilities
+10. Very Short Introduction to Longitudinal Data
 
 # Assignments
 
