@@ -1,0 +1,662 @@
+---
+title: "Lab10 - Introduction to Longitudinal Data"
+author: "Barum Park"
+date: "12/06/2019"
+output: 
+    html_document:
+        keep_md: false
+        matjax: default
+        theme: yeti
+        highlight: textmate
+        toc: true
+---
+
+<style type="text/css">
+
+body{ 
+
+    font-size: 16px;
+    line-height: 1.7em;
+
+}
+
+blockquote {
+    padding: 10px 20px;
+    margin: 0 0 20px;
+    font-size: 16px;
+    border: solid 1px;
+}
+
+h1 { font-size: 32px; }
+
+h2 { font-size: 24px; }
+
+h3 { font-size: 20px; }
+
+.nobullet li {
+  list-style-type: none;
+}
+
+</style>
+
+<br>
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, 
+                      cache = FALSE,
+                      fig.align = "center",
+                      fig.width = 7,
+                      fig.height = 5,
+                      letina = TRUE)
+```
+
+So far we have been dealt with cross-sectional data. The data consisted of $i = 1,2,...,n$ units and for each of these units we had some measurements on a collection of variables. Often we were interested in modeling an outcome variable $Y_i$, which varied across individuals, especially it's conditional distribution given a set of predictors. So, the main interest of analysis was modeling the distribution of $Y_i \,\vert\, X_i = x_i$, where $X_i$ was a scalar or vector of predictors. 
+
+In the longitudinal regression context, we have two different "directions," so to say, along which our outcome variable of interest varies: it will vary across individuals but also across time. So, now, we need two subscripts to denote our outcome variable, $Y_{it}$, where we will use the subscript $i = 1,2,...,n$ to indicate individuals and $t = 1,2,...,m$ for time. 
+
+<br>
+
+# A Short Note on Things We Will NOT Discuss
+
+It should be remembered that in most of the considered models, our justification to make statistical inference was based on asymptotics. Any time we invoked the statement "as the sample size grows large," was a statement about what happens to our estimator as $n \rightarrow \infty$. For example, even when the error term of a OLS regression model does not follow a Normal distribution, we could derive confidence intervals by relying on the Central Limit Theorem, which is a theorem about the asymptotic behavior of a statistic. 
+
+In the longitudinal set up, we have to be a little bit more specific about what it means for the sample to grow large. The sample size might increase as the number of "units" grows large---i.e., when $n \rightarrow \infty$---while the number of time points of measurement, $m$, remains fixed. For example, we might interview the same set of individuals in a large survey over $m = 5$ different time points. Here the time points of measurement are fixed but we might assume, as we've done so far, that the number of individuals in our survey is large enough to rely on scenarios in which $n \rightarrow \infty$.
+
+On the other hand, we can also imagine a situation in which we model a process in which the number of observed units, $n$, remains fixed, while the time points of measurement grows large---i.e., $m\rightarrow \infty$. For example, we might try to model changes in the unemployment rate in the U.S. over time. Here, we would have $n = 1$, although the number of time points of observation would be very large.
+
+In this short and shallow introduction, we will deal only with the first case, namely, scenarios in which we assume that $n \rightarrow \infty$ while $m$ remains fixed. Techniques to analyze the other scenario are discussed in time-series analysis, which require many new theoretical assumptions which are somewhat different from those we are familiar with. 
+
+Another major complexity that is introduced when dealing with longitudinal datasets is the problem of interdependence of observations. Given that we have sampled the individual units at random, it is reasonable to assume that the observations are independent across the units $i = 1,2,...,n$. However, within each units the measurement across time points $t = 1,2,...,m$ might not be independent. Think of the "Matthew Effect," in which my status or wealth at time point $t-1$, $Y_{i(t-1)}$, influences directly the status/wealth at the next time point $Y_{it}$. For phenomena that can be described by these dynamics, it would be unreasonable to assume that $Y_{i(t-1)}$ and $Y_{it}$ are independent. Rather, one of the simplest model that we might think of would have the form
+
+$$Y_{it} = \rho Y_{i(t-1)} +  \epsilon_{it},$$
+
+with $\rho > 1$. The analysis of this simple-looking model requires a whole new theoretical machinery. In addition, would it be reasonable to assume that $\epsilon_{i(t-1)}$ and $\epsilon_{it}$ are independent? Probably not. Again, we will not discuss these complexities in this introduction. But it is good to keep in mind how much we "assume" away in what follows.
+
+
+<br>
+
+# Nested Data Structures
+
+Consider a single variable of interest $Y_{it}$ in the longitudinal context. In the case of a single variable, we might structure our data into the following format:
+
+$$
+\mathbf Y = \begin{bmatrix}
+Y_{11} & Y_{12}& \cdots &Y_{1m} \\
+Y_{21} & Y_{22}& \cdots & Y_{2m} \\
+\vdots & \vdots & \ddots &\vdots \\
+Y_{n1} & Y_{n2} & \cdots &Y_{nm}
+\end{bmatrix},
+$$
+where the first column of $\mathbf Y$ contains the measurements at time $t = 1$ for the $1,2,...,n$ units, the second column the measurements at $t = 2$ and so on. This is the data-format which we have called the **wide format** in the [appendix of our 8th lab](https://htmlpreview.github.io/?https://github.com/baruuum/intro_to_stats_2019/blob/master/Lab8/Lab8.html#appendix-i-melt-and-dcast-functions). Now, suppose we have a predictor variable $X_{it}$ with which we want to predict $Y_{it}$. Again, we can format this variable into wide format as 
+$$
+\mathbf X = \begin{bmatrix}
+X_{11} & X_{12}& \cdots &X_{1m} \\
+X_{21} & X_{22}& \cdots & X_{2m} \\
+\vdots & \vdots & \ddots &\vdots \\
+X_{n1} & X_{n2} & \cdots &X_{nm}
+\end{bmatrix},
+$$
+where the the columns represent different time points at which the variable $X_{it}$ was measured for the $n$ individuals. Putting them together gives us a dataset that looks like the following:
+$$
+[\mathbf Y \;\mathbf X] = \begin{bmatrix}
+Y_{11} & Y_{12} & \cdots &Y_{1m} & X_{11} & X_{12} & \cdots & X_{1m} \\
+Y_{21} & Y_{22}& \cdots & Y_{2m} & X_{21} & X_{22}& \cdots & X_{2m} \\
+\vdots & \vdots & \ddots &\vdots &\vdots & \vdots & \ddots &\vdots \\
+Y_{n1} & Y_{n2} & \cdots & Y_{nm} & X_{n1} & X_{n2} & \cdots & X_{nm} 
+\end{bmatrix}$$
+
+Longitudinal data are often distributed in this format. Yet, the data-format that is most often used in the analysis of longitudinal data is the **long-format**. For the data $[\mathbf Y \; \mathbf X]$, the long form would look like the following:
+
+$$\begin{bmatrix}
+1 & 1 & Y_{11} & X_{11}\\
+1 & 2 & Y_{12} & X_{12} \\
+\vdots & \vdots & \vdots & \vdots \\
+i & t & Y_{it} & X_{it} \\
+\vdots &\vdots &\vdots &\vdots \\
+n&m&Y_{nm} & X_{nm}
+\end{bmatrix}$$
+where the first column contains individual identifies, the second the time points of measurement, and the third column the variables measured. Notice that each row of the dataset represent a individual-year pair; now the information of individual $i$ is contained not in a single row, but over several rows. If individual $i$ is measured over $m_i$ time points, there will be $m_i$ rows containing information for this individual.
+
+It can also happen that you have some individual-level characteristics that don't vary over time, these variables will take on the same value for each individual across all time points. The data would, therefore, look similar to the following (notice where the subscript for $Z_i$ changes):
+
+$$\begin{bmatrix}
+1 & 1 & Y_{11} & X_{11} & Z_1\\
+1 & 2 & Y_{12} & X_{12} & Z_1\\
+\vdots & \vdots & \vdots & \vdots \\
+1 & t & Y_{1t} & X_{1t} & Z_1\\
+2 & 1 & Y_{21} & X_{21} & Z_2 \\
+2 & 2 & Y_{22} & X_{22} & Z_2 \\
+\vdots &\vdots &\vdots &\vdots \\
+2 & t & Y_{2t} & X_{2t} & Z_2\\
+\vdots &\vdots &\vdots &\vdots \\
+n&m&Y_{nm} & X_{nm} & Z_n
+\end{bmatrix}$$
+
+There are many data-structures that can be organized into a long-format, and there's nothing special about longitudinal data here: we would have the same data-structure when individuals, $t= 1,2,...,m$, are *nested* within neighborhoods, $i = 1,2,...,n$; or siblings $t = 1,2,...,m$ nested within families $i = 1,2,...,n$. The additional subscript $t$ is just there to represent a data-structure that has two "dimensions," so to say, across which the measurements vary. Hence, the models that we consider below could be also applied to situations whenever we have this nested data structure; only the interpretation would differ. 
+
+
+<br>
+
+# An Example Dataset
+
+In the lectures, you have encountered three different models to analyze longitudinal data: OLS, fixed effects, and random effects models. After introducing an example dataset, let us consider these models in turn.
+
+The dataset we will use today comes with the `plm` R package. So, let us first install the package:
+```{r, eval = F}
+install.packages("plm")
+```
+Thereafter you can load the data into your environment with the `data` function:
+```{r}
+# attach plm package
+library("plm")
+
+# load data into the environment
+data(Wages, package = "plm")
+```
+This dataset comes from the PSID and was analyzed by Cornwell & Rupert (1988). It is a dataset that you'll encounter multiple times when you keep reading textbooks on panel data analysis (two textbooks that use this dataset that come to my mind are that written by Baltagi and that written by Greene).
+
+Read the basic description of this dataset by typing
+```{r eval= F}
+# read basic description of the data
+?Wages
+
+# check the class of this object
+class(Wages)
+```
+
+> **EXERCISE** 
+>
+>1. What is the `class` of the `Wages` object?
+>1. How many individuals are in this dataset? 
+>2. Over how many time points were these individuals followed?
+>3. Is the dataset in long-format or wide-format?
+>4. Which variables vary over time and which variables don't?
+
+It's interesting to note that this dataset has no identifiers for individuals and time points. But notice that the description says that the `data are organized as a stacked time series/balanced panel.`
+
+Being a **balanced panel** means that each unit (here individuals) is measured at the exact same time points. Also, we notice that the description says that the data consists of a `panel of 595 individuals from 1976 to 1982`.
+
+So, when we divide the number of total observations, $N = nm$, by the number of individuals, $n$, we'll be able to recover the number of time points, $m$.
+
+```{r}
+n = 595
+m = nrow(Wages) / n
+print(m)
+```
+
+From the description that the data are `stacked time series/balanced panels`, we can deduce that the first `7` observations belong to individual `1`, the next `7` observations to individual `2` and so on. So, let us add the individual and time specifiers to the dataset!
+
+First, we load the packages we need:
+
+```{r, message = F}
+library("here")
+library("dplyr")
+library("data.table")
+library("dtplyr")
+library("purrr")
+library("ggplot2")
+```
+Then, we turn the `Wages` dataset into a `data.table` object and add the identifiers:
+
+```{r}
+# turn Wages data.frame into data.table
+dat = as.data.table(Wages)
+
+# create id and time variables
+dat[, `:=`(
+        id = rep(1:595, each = m),
+        year = rep(1976:1982, times = n)
+    )
+] %>%
+    setcolorder(c("id", "year"))
+```
+The `rep(1:n, each = k)` function will take the sequence `1:n` and repeat each element of this sequence `k` times. For example, `seq(1:5, each = 3)` would return a vector with elements `1,1,1, 2,2,2,..., 5,5,5`. On the other hand, `seq(1:5, times = 3)` will repeat the sequence `1:5` exactly `3`times and return `1,2,3,4,5,...,1,2,3,4,5`. Lastly, the `setcolorder` function puts the `id` and `year` column, respectively, into the first and second place of the dataset. Notice as well that the data will be automatically sorted by `id` and `year`, since this is how we have created these columns.
+
+We let `year` increase by one unit of each new row within each individual. But it could be the case (although highly unlikely based on the description of the data) that time progresses unequally across individuals. Say, for example, that individual $i$ was measured in the years 1976, 1980, 1990; but $j$ was measured in the years 1976, 1977, 1990. Then, the first period would span 4 years for $i$ but only one year for $j$, and the second period would be unequal across these two individuals as well.
+
+To check whether all the individuals were indeed measured in one-year intervals, we might look into the `exp` variable
+
+>**EXERCISE** What is the `exp` variable measuring?
+
+If all individuals were interviewed in subsequent years, `exp` should increase in one-year intervals as well. We might check this with the following code:
+
+```{r}
+# check whether wrk increases by one year
+dat[ , .(d_time = diff(exp)), by = id] %>%
+    select(d_time) %>%
+    unique
+```
+
+Here, the `diff` function calculates the first difference across the rows of `dat$exp`. The previous code shows that all first-differences are $1$, hence showing that `exp` increases by one unit (year) across all the measured time points. This is the result we were trying to verify.
+
+Lastly, let us check which variables vary within-individual units and which vary only across individuals. We might do this by the following code:
+
+```{r}
+# check which variable vary over time
+dat[
+    # for each ind. calculate the variance of all columns
+    , map(.SD, function(w) var(as.numeric(w))), by = id
+][
+    # return logical that is `1` for columns that show no
+    # variation within individuals
+    , map(.SD, function(w) sum(w == 0) == .N)
+] %>% 
+  # create vector out of result by unlisting data.table
+  unlist %>%
+  # print the names of the variables that show no variation
+  names(dat)[.]
+```
+
+So, we see that the variables `sex`, `ed`, and `black` do not show any within-individual variation, and vary only across individuals. The code we have used might need a little bit of extra explanation.
+
+1. First, we use the `map` function on `.SD`. Recall that `.SD` stands for `S`ubsest of `D`ata.table; yet, as we have not specified an subset (which we could have done by subsetting the rows or by specifying the `.SDcols` argument), `.SD` refers to the entire data.table, namely `dat`. So, in the first chained code, we first convert all columns to numeric vectors and then calculate the variance of them *for each individual*. This will result in a $n \times k$ dataset, where $n$ is the number of individuals and $k$ the number of predictors.
+
+    Notice that it doesn't matter to which specific numeric values these columns are converted; what matters for us is just whether they show any variation within the individuals or not. Also, if there were a column of `character` type, R would have thrown a `warning` that `NA`s were introduced. Since we don't see such warnings, everything seems to be fine! But to be sure, we can also check this directly (which you should always do). First, we check the data-types of each column of `dat`
+    ```{r}
+    map_chr(dat, class)
+    ```
+    which shows that there are no `character` columns. Also, if we were to apply the `as.numeric` function on a character vector, we can check what happens:
+    ```{r}
+    as.numeric(c("hi", "hello"))
+    ```
+
+2. Next, take the $n\times k$ dataset and, for each column of the dataset, apply a function that returns a `TRUE` if for all individuals (i.e., all rows of the dataset) the variance is calculated to be zero, and returns a `FALSE` otherwise. So, the resulting `data.table` object will be of dimension $1\times k$.
+
+3. Then, we use the pipe (`%>%`) to `unlist` the `data.table` object. Recall that a `data.frame` or `data.table` is just a list, where all elements are vectors of arbitrary type. By `unlist`ing, we turn the one-row `data.table` object into a logical vector. 
+
+4. Lastly, we subset the `names(dat)` vector (which contains the column names of the resulting object) using the resulting vector of the last step. Recall that whenever you use the pipe (`%>%`), the object returned from the last step will be used as the *first argument* of the following function. If you want to avoid that, you will need to use the dot (`.`) to specify the "place" where the object should be put. Here, in the last step, we use the calculated logical vector to subset the vector of column names of the `dat` object. (In fact, we could also have used `names(.)[.]` to get the same results as the names of `dat` are equal to the names of object that is returned by the last step).
+
+
+<br>
+
+# The Model(s)
+
+The models that we consider here have the following form
+
+$$\begin{aligned}
+Y_{it} &= \alpha + \mathbf{X}_{it}'\boldsymbol\beta + \nu_{it} \\
+&= \alpha + \mathbf W_{it}'\boldsymbol \delta + \mathbf Z_{i}'\boldsymbol \gamma + \eta_i + \epsilon_{it} \\
+&= \alpha_i + \mathbf W_{it}'\boldsymbol \delta + \mathbf Z_{i}'\boldsymbol \gamma + \epsilon_{it}
+\end{aligned}$$
+
+where (in the first line of the equation) $\mathbf X_{it} = [X_{it}^{(1)}, ..., X_{it}^{(k)}]'$ is a vector of predictors, $\boldsymbol \beta$ is a $k\times 1$ vector,  and $\nu_{it}$ is an error term. Note that this is our familiar linear model with one important difference: namely, the variables vary across two subscripts (individuals and time).
+
+In the second line of the equation, $\mathbf{X}_{it}$ is decomposed into two components: $\mathbf{W}_{it} = [ W_{it}^{(1)}, ..., W_{it}^{(p)}]'$, which is a $p\times 1$ vector of variables that vary across both individuals and time and $\mathbf Z_{i} = [Z_i^{(1)},..., Z_i^{(q)}]'$, which is a $q\times 1$ vector of variables that vary only across individuals but not across time, so that $p + q = k$. Also, the error term $\nu_{it}$ is decomposed into $\nu_{it} = \eta_i + \epsilon_{it}$, where $\eta_i$ is the source of error variance between-individuals and $\epsilon_{it}$ is the source of error variance within-individuals.
+
+The last line simply shows that we can write $\alpha_i = \alpha + \eta_i$ and think of the between-individual variation as assigning each individual his/her own intercept coefficient.
+
+Throughout, we will assume that 
+
+1. $\text{E}[\epsilon_{it} \,\vert\, \mathbf{X}] =  0$
+2. $\text{Var}[\epsilon_{it}\,\vert\,\mathbf{X}] = \sigma_\epsilon^2$
+3. $\text{Cov}[\epsilon_{it}, \epsilon_{jl}\,\vert\,\mathbf{X}] = 0, \quad i\ne j, t\ne l.$
+
+as we did before. The assumptions are those of exogeneity, homoskedasticity, and no autocorrelation, with which you should be familiar by now. Notice, however, that these assumptions are about $\epsilon_{it}$, the within-individual variation of the error term. The assumptions about $\eta_i$ are the key to understand the difference between OLS regression on panel data (complete pooling), the fixed effects model (no pooling), and the random effects model (partial pooling). There are many ways in which these models are introduced in the panel data analysis context. Here, we'll use a very particular approach, but keep in mind that there are also other interpretations and that the terminology in the literature is quite messy.
+
+
+## OLS
+
+In this lab, we will deal with a very simple model: namely a model which has only a single predictor. Extensions to the full model above is quite straightforward; and given only limited time, I thought the most important part is to get the intuition right. So, let us start with the model
+
+$$Y_{it} = \alpha + X_{it}\beta + \nu_{it},$$
+
+where $Y_{it}$ is the wage of individual $i$ in year $t$ on the log-scale and $X_{it}$ is the years of full-time work experience. 
+
+You can always fit our familiar OLS regression model to longitudinal data. For example, if the data is structured in long-format, you can simply regress the outcome on the predictors that you are concerned with. This amounts to assuming that the composite error term $\nu_{it} = \eta_i + \epsilon_{it}$ is independently and identically distributed across all of the individual-time units. It is also equivalent to assuming that 
+$$\text{Var}[\nu_i\,\vert\,\mathbf{X}] = \text{Var}[\eta_i + \epsilon_{it} \,\vert\,\mathbf{X}] = \text{Var}[\epsilon_{it}\,\vert\,\mathbf{X}] = \sigma_\epsilon^2.$$ That is, there is no systematic between-individual error variance and  $\text{Var}[\eta_i\,\vert\,\mathbf{X}] = 0$. 
+
+There are many ways to criticize this model. For example, assuming that $\text{Var}[\eta_i\,\vert\,\mathbf X] = 0$ means that the predictors we include in the model account for all systematic between-individual difference in wages, which is highly implausible. Yet, more fundamentally, notice that this model fits **a single line** for all individuals. 
+
+To illustrate what the model is proposing, let us fit a OLS regression on the full sample and look into the predicted fit between the outcome and the predictor in the aggregate. Thereafter, we will look into the within-individual relationship between `lwage` and `exp` for a random sample of `s = 12` individuals.
+
+```{r}
+# fit ols 
+ols_simple = lm(lwage ~ exp, data = dat)
+
+# predict outcome
+c_ols = coef(ols_simple)
+
+ggplot(dat, aes(x = exp, y = lwage)) + 
+    geom_point(col = "darkmagenta") + 
+    stat_function(
+        fun = function(x) c_ols[1] + c_ols[2] * x,
+        col = "grey35",
+        size = 1) +
+    theme_bw() +
+    labs(
+        x = "Work Experience (Years)",
+        y = "Wage (log)"
+    )
+```
+This seems to be a reasonable fit, as the OLS regression line will always go through the "middle" of the points. Next, let us color code the points and connect them within each of the individuals:
+
+```{r}
+ggplot(
+    dat, 
+    aes(x = exp, 
+        y = lwage, 
+        col = factor(id)) # this will color-code things
+    ) + 
+    geom_point(alpha = .4) + 
+    geom_line(alpha = .4) + 
+    stat_function(
+        fun = function(x) c_ols[1] + c_ols[2] * x,
+        col = "grey35",
+        size = 1) +
+    theme_bw() +
+    labs(
+        x = "Work Experience (Years)",
+        y = "Wage (log)"
+    ) +
+    scale_color_viridis_d(option = "A") + 
+    theme(legend.position = "none")
+```
+Hm...this doesn't look very informative, although it seems that the within-individual slope tends to be steeper than the aggregate trend. 
+
+We might go one step further and randomly sample a subset of individuals and compare the regression fit with their wage trajectory:
+```{r}
+# set seed
+set.seed(9846)
+
+# sample 12 individuals
+samp = sample.int(n, 12, replace = F)
+
+# dataset of sampled individuals
+samp_dat = dat[id %in% samp]
+
+# generate exp-grid for predictions
+exp_seq = seq(min(samp_dat$exp), max(samp_dat$exp), 1)
+
+# dataset to make predictions
+tmp_ols = data.table(
+    id = rep(1:n, each = length(exp_seq)),
+    exp = rep(exp_seq, times = n)
+) %>%
+    mutate(
+        lwage = predict(ols_simple, newdata = .)
+    ) %>%
+    filter(id %in% samp)
+
+# plot relationship between outcome and predictor
+ggplot(samp_dat, 
+       aes(x = exp, y = lwage)) + 
+    geom_point(col = "darkmagenta") + 
+    geom_line(data = tmp_ols,
+              col = "grey35",
+              size = 1) + 
+    facet_wrap(~ id) +
+    theme_bw() +
+    theme(
+        strip.background = element_blank(),
+        strip.text = element_text(hjust = 0, face = 2)
+    ) +
+    labs(
+        x = "Work Experience (Years)",
+        y = "Wage (log)"
+    ) +
+    lims(y = c(5.5, 7.5))
+```
+
+Notice that the model is predicting the same trend for all of the sampled individuals; this is true for all individuals in the dataset. So, we might think of fitting an OLS regression to longitudinal data as pooling all observations in the dataset to estimate a single trend for all individuals. 
+
+Yet, once we look into the within-individual relationship between the outcome and the predictor, we see that the models' predictions are not really in line with the data. This is also expected as there is a lot of between-individual heterogeneity in the trends, which we cannot capture when we pool across all observations.
+
+
+## Fixed Effects Models
+
+One way to get a better fit to the data is to add a source of between-individual heterogeneity to the model, while assuming that the slope remains the same across individuals. This leads us to the equation
+
+$$Y_{it} = \alpha + X_{it}\beta + \eta_i + \epsilon_{it}$$
+
+Fixed effects and random effects models differ mainly in their assumption regarding the behavior of $\eta_i$. Notice that $\eta_i$ does not have a $t$ subscript, reflecting it varies only across individuals but not within them, so you can think of it as an individual-specific shift in the intercept. That is, the intercept for individual $1$ would be $\alpha_1 = \alpha + \eta_1$, that for individual $2$ would be $\alpha_2 = \alpha +\eta_2$, and that for individual $i$ would be $\alpha_i = \alpha + \eta_i$. So we could rewrite the model as (notice the new subscript on $\alpha_i$)
+
+$$Y_{it} = \alpha_i + X_{it}\beta + \epsilon_{it}.$$
+
+But how could we estimate an individual-specific intercept? 
+
+In fact, we know already the answer. Recall that when we were "controlling" for education in our models, we used to add  dummy variables to our equation, e.g.,
+
+$$ Y_i = \beta_0 + X_i\beta_1+ SC_i\beta_{2} + BA_i\beta_{3}  + \epsilon_i$$
+
+where $SC_i$ stands for "some college" and $BA_i$ for "BA or higher." Notice that this is equivalent to fitting a separate intercept in our regression equation for each education group:
+
+$$ Y_{hi} =\beta_h + X_{hi}\beta_2  + \epsilon_{hi}$$
+
+where $\beta_{LS} = \beta_0$ is the intercept for those with less then "some college," $\beta_{SC} = \beta_0 + \beta_2$ for those with some college education, and $\beta_{BA} = \beta_0 + \beta_3$ for those with a BA or higher.
+
+Analogously to the scenario in which time points are varying within each individual, here we have just added the subscript $h$ to emphasize that individuals vary within education-groups. It's the same structure of data, only our interpretation differs.
+
+So, to fit separate intercepts for each individual in longitudinal data, we can simply include $n - 1$ dummy variables into our model, where the $i$th dummy is 1 for the observations of the $i$th individual and zero otherwise. This model, with individual-specific intercepts, is what people call the **fixed effects model** (sometimes it's also called the Least Squares Dummy Variable model).
+
+>**EXERCISE** We cannot include all $n$ dummy variables if we have a constant term in our model. Why?
+
+There is one complexity, however, that arises when fitting these models. Suppose our dataset consists of $n = 50,000$ individuals. Then we would have to add $49,999$ new variables to estimate these models! This is doable, but often times not computationally efficient. Hence, when we fit a fixed effects model to the data, any reasonable statistical package will compute the estimates using a "trick" called *demeaning*. 
+
+We start from the model 
+
+$$Y_{it} = \alpha + X_{it}\beta + \eta_i + \epsilon_{it}$$
+
+and take the average of both sides
+
+$$\begin{aligned}
+\sum_{t=1}^m Y_{it} &= \alpha + \beta\sum_{t=1}^m X_{it}+ \eta_i + \sum_{t=1}^m\epsilon_{it} \\
+&= \alpha + \beta \bar X_i + \eta_i + \bar\epsilon_i
+\end{aligned}$$
+
+Subtracting the second equation from the first gives
+
+$$(Y_{it} - \bar Y_i) = \beta (X_{it} - \bar X_i) + (\epsilon_{it} - \bar\epsilon_i)$$
+
+There are two important points to notice here: 
+
+1. The $\eta_i$'s and the constant term $\alpha$ are subtracted out. This will be true for any variable that has no within-individual variation and *implies that we will not be able to estimate the coefficients for variables that show no within-individual variation* (notice that this will be the same when we include $n- 1$ dummy variables in an OLS regression; these dummies would be perfectly collinear with any variable that has no within-individual variation). 
+
+2. The $\beta$ in the final equation is exactly the same $\beta$ that appears in the first equation. Hence, if we subtract the individual-specific means from both the outcome and the time-varying variables, and use these variables in a OLS regression, we will recover the same $\beta$ value that would be estimated with the model that includes $n- 1$ dummy variables. The only thing that we have to take care of are the degrees-of-freedoms: the demeaned model would estimate one parameter, $\beta$, but the model contains, in fact, $n$ parameters (for each of the dummy variables plus the constant, i.e., all the fixed effects).
+
+Let us look how the fixed effects model can be estimated in R:
+```{r}
+# fit fixed effects model (least squares dummy variables)
+lsdv_simple = lm(lwage ~ -1 + exp + factor(id) , data = dat)
+```
+There is one thing in this code with which you might not be familiar. When you specify `-1` in a formula, it will tell R that no constant should be estimated. For the the current model we can either choose between estimating a constant and the coefficients of $n-1$ dummy variables or estimating coefficients of $n$ dummy variables and dropping the constant. Here, we've opted for the latter. (Note: as this model does not contain a constant the R-squared statistic will not be the statistic you think it is.)
+
+To get the fixed effects estimator via the demeaning procedure, we can rely on the `plm` package:
+```{r}
+fixed_simple = plm(lwage ~ exp, data = dat, model = "within")
+```
+We might also check that these models give us the same estimate of $\beta$:
+```{r}
+all.equal(
+    coef(fixed_simple)[1], coef(lsdv_simple)[1]
+)
+```
+
+Lastly, let us explore what predictions the model makes about our data. Let us reuse the 12 individuals we've sampled before for this task:
+
+```{r}
+# generate exp-grid for predictions
+exp_seq = seq(min(samp_dat$exp), max(samp_dat$exp), 1)
+
+# dataset to make predictions
+tmp_fixed = data.table(
+    id = rep(1:n, each = length(exp_seq)),
+    exp = rep(exp_seq, times = n)
+) %>%
+    mutate(
+        lwage = predict(lsdv_simple, newdata = .)
+    ) %>%
+    filter(id %in% samp)
+    
+# plot predictions
+ggplot(samp_dat, 
+       aes(x = exp, y = lwage)) + 
+    geom_point(col = "darkmagenta") + 
+    geom_line(data = tmp_fixed,
+              col = "grey35",
+              size = 1) + 
+    facet_wrap(~ id) +
+    theme_bw() +
+    theme(
+        strip.background = element_blank(),
+        strip.text = element_text(hjust = 0, face = 2)
+    ) +
+    labs(
+        x = "Work Experience (Years)",
+        y = "Wage (log)"
+    ) +
+    lims(y = c(5.5, 7.5))
+```
+There are two things that are worth noting in this plot. First, we see that the regression lines are steeper (larger in magnitude) than those of the corresponding plots based on the OLS regression. Thus, this confirms that the within-individual relationship between `lwage` and `exp` is stronger than the aggregate trend. Second, notice that all the regression lines have the exact same slope and that only the intercepts differ. This is also expected from the formulation of the fixed effects model. 
+
+## Random Effects Model
+
+Let us return to the equation 
+
+$$Y_{it} = \alpha + X_{it}\beta + \eta_i + \epsilon_{it}.$$
+
+In the fixed effects model (or better the least squares dummy variables model), $\eta_i$ was treated as a fixed parameter of the model: namely, it is a characteristic of the population (or the DGP) which is *not random*; it's a fixed number we want to estimate, similar to other regression parameters we have dealt with so far. So, it doesn't have a distribution or any probability associated with it. (In principle, you could also treat $\eta_i$ as a random variable with variance equal to zero, which implies that it is equal to constant with probability one; but this goes a little bit beyond the material of this course.)
+
+On the other hand, in the random effects model we assume that $\eta_i$ is a random variable, so it will have an expected value and a variance (although the distribution itself might remain unspecified for the GLS estimator). It is assumed that
+
+$$\text{Cov}[\eta_j, \epsilon_{it}\,\vert\,\mathbf{X}] = 0, \quad\text{for all }j, i,t$$
+
+i.e., the "random effect" is not correlated with the within-individual error term. Further, we assume that
+
+$$\text{E}[\eta_i\,\vert\, \mathbf{X}] = 0 \quad \text{and}\quad \text{Var}[\eta_i\,\vert\,\mathbf{X}] = \sigma_{\eta}^2.$$
+
+Hence, similar to $\epsilon_{it}$, $\eta_i$ is treated as a random disturbance around the conditional mean of $Y_{it}$ with variance $\sigma_\eta^2$, where the only difference is that $\eta_i$ is varying across individuals but not within them. The model is then estimated by Feasible Generalized Least Squares (FGLS).
+
+What econometricians often discuss as the "random effects model" is also a particular case of a "mixed effects" or "multilevel model." Yet, when multilevel models are discussed in the literature, it is often assumed in addition that $\epsilon_{it}$ and $\eta_i$ follow Normal distributions and are independent given the predictors in the model, i.e., $\epsilon_{it} \perp \eta_i \,\vert\, \mathbf{X}$. As you have become a little bit familiar with the Normal distribution over this course, we might also discuss this model by using these stronger assumptions. This will help to understand the results that follow. We assume that 
+
+$$\epsilon_{it} \sim \text{Normal}(0, \sigma_\epsilon^2) \quad \text{and}\quad \eta_i \sim \text{Normal}(0, \sigma_\eta^2)$$
+
+where $\epsilon_{it}$ and $\eta_i$ are independent. With these assumptions, the random effects model can be expressed as
+
+$$Y_{it} \sim \text{Normal}(\alpha_i + X_{it}\beta, \epsilon_{it}^2)$$
+and
+$$\alpha_i \sim \text{Normal}(\alpha, \sigma_\eta^2).$$
+
+The first equation simply states that for individual $i$, the outcome $Y_{it}$ is drawn from a Normal distribution with mean $\alpha_i + X_{it}\beta$ and variance $\epsilon_{it}^2$. Notice that this is the same as fitting a within-individual regression of form $Y_{it} = \alpha_i + X_{it}\beta + \epsilon_{it}$ with $\epsilon_{it} \sim \text{Normal}(0, \sigma_\epsilon^2)$.
+
+The second equation shows that we are assuming that the individual-specific intercepts are randomly varying around a grand mean ($\alpha$) according to a bell-shaped curve. If $\sigma_\eta^2$ is small, this will make estimates of $\alpha_i$ that are very far away from $\alpha$ highly unlikely. Our estimates for the individual-specific intercepts will be therefore "shrunk" towards the grand-mean $\alpha$, where the extent to which we shrink the estimates will depend on our estimate of $\sigma_\eta^2$ (To be more precise the extent of shrinkage will depend on both $\sigma_\eta^2$ and $\sigma_\epsilon^2$). For this reason, the random effects model is sometimes referred to as a "shrinkage estimator." 
+
+Fitting the random effects model in R can be done by specifying the option `model = "random"` in the `plm` function:
+
+```{r}
+rand_simple = plm(lwage ~ exp, data = dat, model = "random")
+```
+
+Let us also create a plot of predictions. Getting the correct predictions is a little bit more evolved in this case. We need to predict first the random effects ($\eta_i$) and, thereafter, add them to the predictions based on $\alpha + X_{it}\beta$.
+
+```{r}
+# generate exp-grid for predictions
+exp_seq = seq(min(samp_dat$exp), max(samp_dat$exp), 1)
+
+# dataset to make predictions
+tmp_rand = data.table(
+    id = rep(1:n, each = length(exp_seq)),
+    exp = rep(exp_seq, times = n)
+) %>%
+    # here predictions are based on alpha + X_{it}\beta
+    mutate(
+        lwage = predict(rand_simple, newdata = .)
+    ) %>%
+    filter(id %in% samp)
+
+# predict eta using `ranef` function
+reffs = ranef(rand_simple) %>%
+    # create data.table where the first column is
+    # is the "id" name and the second eta_i
+    cbind(id = as.numeric(names(.)), reffs = .) %>%
+    as.data.table
+
+# merge predicted eta_i to tmp_rand
+tmp_rand = merge(tmp_rand, reffs, by = "id", all.x = T)
+
+# add eta_i to alpha + X_{it}\beta
+tmp_rand[, lwage := lwage + reffs]
+
+# add random effects to prediction data
+ggplot(samp_dat, 
+       aes(x = exp, y = lwage)) + 
+    geom_point(col = "darkmagenta") + 
+    geom_line(data = tmp_rand,
+              col = "grey35",
+              size = 1) +
+    facet_wrap(~ id) +
+    theme_bw() +
+    theme(
+        strip.background = element_blank(),
+        strip.text = element_text(hjust = 0, face = 2)
+    ) +
+    labs(
+        x = "Work Experience (Years)",
+        y = "Wage (log)"
+    ) +
+    lims(y = c(5.5, 7.5))    
+```
+
+# Comparison of the Predictions
+
+Lastly, we might compare how the predictions of the OLS model, the fixed effects model, and the random effects model compare to one another:
+
+```{r}
+tmp_df = rbind(
+  tmp_ols, 
+  tmp_fixed, 
+  tmp_rand[, .(id, lwage, exp)]) %>%
+  mutate(model = rep(c("ols", "fixed", "rand"), each = nrow(tmp_ols)))
+
+# add random effects to prediction data
+ggplot(samp_dat, 
+       aes(x = exp, y = lwage)) + 
+    geom_point(col = "grey", alpha = .8) + 
+    geom_line(data = tmp_df,
+              aes(col = model),
+              size = .8,
+              alpha = .8) +
+    scale_color_viridis_d(option = "A", end = .8)+
+    facet_wrap(~ id) +
+    theme_bw() +
+    theme(
+        strip.background = element_blank(),
+        strip.text = element_text(hjust = 0, face = 2),
+        panel.grid = element_blank()
+    ) +
+    labs(
+        x = "Work Experience (Years)",
+        y = "Wage (log)"
+    ) +
+    lims(y = c(5.5, 7.5)) 
+```
+Notice that the intercept---i.e., the point at which the lines would intersect with `exp = 0`---for the random effects model lies always between the the intercept for the OLS model and the fixed effects model. This is the expected behavior which might be (quite roughly) explained as the following:
+
+- The OLS estimator pools across all observations by assuming there is a common trend across all individuals; no effort is put into estimating individuals-specific intercepts. This is why this approach is sometimes referred to as "complete pooling"
+- the fixed effects estimator uses all within-individual observations to estimate the individual-specific intercepts; we don't care what the individual-specific intercept of individual $j$ is, when estimating the intercept for individual $i$. For each focal individual, we use only his/her observations (notice that this is not 100% true, as we estimate a common $\beta$ coefficient). Sometime this is referred to as the "no pooling" approach.
+- the random effects estimator is a compromise between the OLS and the fixed effects estimator. It assumes that the individuals have something in common when it comes to the intercept, but that there is also variation across individuals. This is incorporated by the formulation that individuals' intercepts vary randomly around a "grand mean" ($\alpha$) with a shared variance parameter ($\sigma_\eta^2$). All individual-specific intercepts will be used to estimate $\alpha$ and $\sigma_\eta^2$, and these estimates will, in turn, inform our estimates of the $\alpha_i$'s. So, our estimate of $\alpha_i$ will be "informed" by our estimate of $\alpha_j$ in sharing the common parameters $\alpha$ and $\sigma_\eta^2$. This is sometimes referred to as "borrowing strength" across individuals, and this approach is often referred to as "partial pooling."
+
+So, while we have to assume, in addition to all assumptions of the fixed effects model, that the individual-specific intercepts are uncorrelated with the time-varying variables in our the model, the random effects model has its merits. In fact, assuming a common distribution for the individual-level intercepts will often lead to more accurate out-of-sample predictions of these intercepts (which are sometimes the estimands that are of interest of a study). The fixed effects model, however, is often more appropriate when we care not so much about the estimated intercepts (or predictions of trends) but only about getting an unbiased estimate of the regression coefficient $\beta$. Notice, however, that this assumes that there is a common parameter $\beta$ that describes the within-individual association between the outcome and our predictor for all individuals. If the relationship differs heavily across individuals, estimating a common $\beta$ might be not very informative.
+
+# Looking Ahead
+
+This is just the tip of the iceberg. There are entire textbooks on panel data models with several chapters discussing fixed effects and random effects/multilevel models. Some basic extensions we can think of are 
+
+1. models in which we add more time-varying variables:
+
+$$ Y_{it} = \alpha_i + X_{it}^{(1)}\beta_1 + X_{it}^{(2)}\beta_2 + \epsilon_{it}$$
+
+2. models in which time-constant predictors are added:
+
+$$ Y_{it} = \alpha_i + X_{it}\beta + Z_{i}\gamma + \epsilon_{it}$$
+
+3. or models in which not only the intercept but also the slope coefficient is allowed to vary across individuals (note the subscript on $\beta$):
+
+$$ Y_{it} = \alpha_i + X_{it}\beta_i + \epsilon_{it}$$
+
+There are many other extensions, such as one in which the outcome variable at time $t-1$ influences the value at the next time point:
+
+$$Y_{it} = \rho Y_{i(t-1)} + X_{it}\beta + \epsilon_{it}$$
+
+and so on. 
+
+Over this semester we have dealt mainly with cross-sectional data, as they are the easiest to study. Yet, if you keep working on quantitative methods, you'll encounter many more interesting models and the models for longitudinal data will be probably belong to those.
