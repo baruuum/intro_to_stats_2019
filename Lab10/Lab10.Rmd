@@ -1,5 +1,5 @@
 ---
-title: "Lab10 - Introduction to Longitudinal Data"
+title: "Lab10 - Very Brief Introduction to Longitudinal Data Analysis"
 author: "Barum Park"
 date: "12/06/2019"
 output: 
