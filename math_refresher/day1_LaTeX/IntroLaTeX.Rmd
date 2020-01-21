@@ -42,7 +42,7 @@ h3 { font-size: 20px; }
 
 LaTeX is a document preparation system which is **free** (yay!) and extremely flexible. It is not a word processor but rather a formatter: you write some text, formatted with a set of commands, which is then compiled into a document once you are finished. Here "finished" should be interpreted loosely as "any time you want"; the difference of writing a LaTeX document and using, say, Microsoft Word is that you won't see immediately how your document looks like while you are writing, since you have to compile the document to incorporate any new changes. Some people like this feature of LaTeX, as it may help you to concentrate on the text; others don't, as you may want to see the appearance of the final document as you are writing.
 
-I usually use a program called TeXstudio (which is also free, yay!) to create my documents. However, there are many other programs or online-platforms that you might use. Overleaf, for example, is a great online editor with which you can format LaTeX documents and you'll get an account for free (yay!) when you use your NYU e-mail address. It is also very convenient if you are co-authoring with others as you can edit the same document simultaneously with your collaborators (Siwei and me used this platform for the last paper we've been writing together). The only shortcoming is that you need to have internet access to use it.
+I usually use a program called TeXstudio (which is also free, yay!) to create my documents. However, there are many other programs or online-platforms that you might use. Overleaf, for example, is a great online editor with which you can format LaTeX documents and you'll get an account for free (yay!) when you use your NYU e-mail address. It is also very convenient if you are co-authoring with others as you can edit the same document simultaneously with your collaborators (Siwei and I used this platform for the last paper we've been writing together). The only shortcoming is that you need to have internet access to use it.
 
 <br> 
 
@@ -228,7 +228,7 @@ Suppose you have a file called `mmsbm.pdf` in the same folder as your `*.tex` fi
 \end{figure}
 ```
 
-- By now, I hope that you'll be able to tell what this code is doing. The only new thing here is `\includegraphics`, which is a command to include graphics(!). `[width=width-of-graphic]` specifies the width of the figure, where `\textwidth` is the width of the page (minus the margins); `{file-name}` specifies the name of the file that contains the figure
+- By now, I hope that you'll be able to tell what this code is doing. The only new thing here is `\includegraphics`, which is a command to include graphics(!). `[width=width-of-graphic]` specifies the width of the figure, where `\textwidth` is the width of the page (minus the margins);  `{mmsbm.pdf}` specifies the path to the file that contains the figure. If you put the file in the same directory as your `.tex` file, as I am doing here, you need only to specify the file name.
 
 <br>
 
@@ -287,7 +287,7 @@ $$
 
 I think with this you'll be able to start using LaTeX. Of course, there is a lot to learn and, as with other things, Google will be your best friend. 
 
-Below, I put everything together into one document. I've also added some `sections` and `subsections` to the document. The compiled pdf file can be found in my [github repository](https://github.com/baruuum/intro_to_stats_2019/tree/master/math_refresher/day1_Latex).
+Below, I put everything together into one document. I've also added some `sections` and `subsections` to the document. The compiled pdf file can be found in [here](https://github.com/baruuum/intro_to_stats_2019/blob/master/math_refresher/day1_LaTeX/gendoc.pdf).
 
 ```latex
 \documentclass[12pt]{article}
