@@ -107,7 +107,7 @@ people would not know that they are welcomed.
 That different programs use different symbols for comments can be confusing. Recall that
 
 1. In R, everything following an `#` will be commented out
-2. In LaTex, everything following an `&` will be commented out
+2. In LaTex, everything following an `%` will be commented out
 3. In Rmarkdown/markdown, everything enclosed in `<!--` and `-->` will be commented out.
 
 The problem is that you'll sometimes switch between LaTeX, R, and markdown environments *within* the same Rmarkdown document. Although this sounds really confusing, it is often obvious by the context in which envorinment you are operating. I'll give you an example to make this clear at the end of this short lecture. 

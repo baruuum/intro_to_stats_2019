@@ -7,6 +7,7 @@
 <meta charset="utf-8" />
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 <meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
 
 
 <meta name="author" content="Barum Park" />
@@ -290,9 +291,7 @@ h6 {
 </style>
 
 
-</head>
 
-<body>
 
 <style type="text/css">
 .main-container {
@@ -306,7 +305,6 @@ code {
 }
 img {
   max-width:100%;
-  height: auto;
 }
 .tabbed-pane {
   padding-top: 12px;
@@ -323,8 +321,6 @@ summary {
 </style>
 
 
-
-<div class="container-fluid main-container">
 
 <!-- tabsets -->
 
@@ -382,20 +378,17 @@ summary {
 }
 </style>
 
-<script>
-$(document).ready(function () {
-  window.buildTabsets("TOC");
-});
-
-$(document).ready(function () {
-  $('.tabset-dropdown > .nav-tabs > li').click(function () {
-    $(this).parent().toggleClass('nav-tabs-open')
-  });
-});
-</script>
-
 <!-- code folding -->
 
+
+
+
+</head>
+
+<body>
+
+
+<div class="container-fluid main-container">
 
 
 
@@ -405,7 +398,7 @@ $(document).ready(function () {
 
 
 <h1 class="title toc-ignore">Very Short Introduction to Rmarkdown</h1>
-<h4 class="author"><em>Barum Park</em></h4>
+<h4 class="author">Barum Park</h4>
 
 </div>
 
@@ -515,7 +508,7 @@ output:
 <p>That different programs use different symbols for comments can be confusing. Recall that</p>
 <ol style="list-style-type: decimal">
 <li>In R, everything following an <code>#</code> will be commented out</li>
-<li>In LaTex, everything following an <code>&amp;</code> will be commented out</li>
+<li>In LaTex, everything following an <code>%</code> will be commented out</li>
 <li>In Rmarkdown/markdown, everything enclosed in <code>&lt;!--</code> and <code>--&gt;</code> will be commented out.</li>
 </ol>
 <p>The problem is that you’ll sometimes switch between LaTeX, R, and markdown environments <em>within</em> the same Rmarkdown document. Although this sounds really confusing, it is often obvious by the context in which envorinment you are operating. I’ll give you an example to make this clear at the end of this short lecture.</p>
@@ -747,6 +740,23 @@ $(document).ready(function () {
 
 
 </script>
+
+<!-- tabsets -->
+
+<script>
+$(document).ready(function () {
+  window.buildTabsets("TOC");
+});
+
+$(document).ready(function () {
+  $('.tabset-dropdown > .nav-tabs > li').click(function () {
+    $(this).parent().toggleClass('nav-tabs-open')
+  });
+});
+</script>
+
+<!-- code folding -->
+
 
 <!-- dynamically load mathjax for compatibility with self-contained -->
 <script>

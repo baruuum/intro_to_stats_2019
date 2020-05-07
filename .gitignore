@@ -77,26 +77,4 @@
 !data/regdat.csv
 !data/lab5.csv
 
-## Assignments --------------------------------------
-
-# assignments directory
-!assignments/
-
-# assignment1
-!assignments/assignment1/
-!assignments/assignment1/assignment1.pdf
-
-# assignment2
-!assignments/assignment2/
-!assignments/assignment2/assignment2.pdf
-
-# assignment3
-!assignments/assignment3/
-!assignments/assignment3/assignment3.pdf
-
-# assignment4
-!assignments/assignment4/
-!assignments/assignment4/wide.csv
-!assignments/assignment4/assignment4.pdf
-
 .Rproj.user
