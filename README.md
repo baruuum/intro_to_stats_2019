@@ -20,11 +20,3 @@ If you find any errors or typos, or anything you want to add, please shoot me a 
 8. Binary Outcomes, Maximum Likelihood Estimation, Linear Probability Model, Logistic Regression, Predicted Probabilities
 9. Latent Variable Formulation of the Logit/Probit Model, Ordered and Multinomial Logistic Regression, Simulation-based Confidence Intervals for Predicted Probabilities
 10. Very Short Introduction to Longitudinal Data
-
-## Assignments
-
-1. Basic mean and variance calculations, some combinatorics, 
-exercises in plotting via ggplot, a small simulation exercise
-2. Hypothesis testing, t- and chi-squared tests, statistical power, correlations and linear regression
-3. Assumptions of the Linear Regression Model, interactions, stripes in residuals-versus-fitted plots
-4. Simpson's Paradox, Fixed and Random Effects
